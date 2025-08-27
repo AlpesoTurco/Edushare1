@@ -1,0 +1,135 @@
+<%- include ('Plantilla/Inicio') %>
+    <main id="perfil-usuario" class="flex-1 p-4 md:p-6 bg-gray-100 bg-grid">
+  <!-- Encabezado -->
+  <section class="mb-6">
+    <h1 class="text-xl md:text-2xl font-semibold text-gray-900">Perfil de usuario</h1>
+    <p class="text-sm text-gray-500">Consulta la información completa del usuario y su historial de accesos.</p>
+  </section>
+
+  <!-- Información general -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
+    <div class="flex flex-col md:flex-row gap-6 items-start">
+      <!-- Foto -->
+      <div class="flex-shrink-0">
+        <img src="https://i.pravatar.cc/150?img=32" alt="Foto de perfil"
+             class="w-32 h-32 rounded-full border-4 border-blue-600 shadow">
+      </div>
+
+      <!-- Datos principales -->
+      <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Juan Pérez Gómez</h2>
+          <p class="text-sm text-gray-500">Usuario registrado</p>
+          <p class="text-sm mt-2"><span class="font-semibold">CURP:</span> XEXX010101HNEXXXA4</p>
+          <p class="text-sm"><span class="font-semibold">RFC:</span> PEXJ800101XXX</p>
+          <p class="text-sm"><span class="font-semibold">NSS:</span> 12345678901</p>
+        </div>
+
+        <div>
+          <p class="text-sm"><span class="font-semibold">Correo:</span> juan.perez@empresa.com</p>
+          <p class="text-sm"><span class="font-semibold">Teléfono:</span> +52 33 1234 5678</p>
+          <p class="text-sm"><span class="font-semibold">Sexo:</span> M</p>
+          <p class="text-sm"><span class="font-semibold">Fecha de nacimiento:</span> 01/01/1990</p>
+          <p class="text-sm"><span class="font-semibold">Estado civil:</span> Casado</p>
+          <p class="text-sm"><span class="font-semibold">Tipo de usuario:</span> usuario</p>
+        </div>
+
+        <div class="md:col-span-2">
+          <p class="text-sm"><span class="font-semibold">Domicilio:</span> Calle Falsa 123, Colonia Centro, Guadalajara, Jalisco, CP 44100</p>
+          <p class="text-sm mt-2">
+            <span class="font-semibold">Activo:</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Sí</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="mt-6 flex space-x-4">
+      <button onclick="editarUsuario()" 
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        Editar
+      </button>
+      <button onclick="darDeBaja()" 
+        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+        Dar de baja
+      </button>
+    </div>
+  </section>
+
+  <!-- Historial de accesos -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-5">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Historial de entradas y salidas</h3>
+    <ul class="divide-y divide-gray-200 text-sm">
+      <li class="py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+          Entrada
+        </div>
+        <span class="text-gray-500">26/08/2025 - 08:03 AM</span>
+      </li>
+      <li class="py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+          Salida
+        </div>
+        <span class="text-gray-500">26/08/2025 - 02:15 PM</span>
+      </li>
+      <li class="py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+          Entrada
+        </div>
+        <span class="text-gray-500">25/08/2025 - 08:05 AM</span>
+      </li>
+      <li class="py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+          Salida
+        </div>
+        <span class="text-gray-500">25/08/2025 - 02:00 PM</span>
+      </li>
+    </ul>
+  </section>
+</main>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  function editarUsuario() {
+    Swal.fire({
+      title: 'Editar usuario',
+      text: 'Aquí redirigirías al formulario de edición.',
+      icon: 'info',
+      confirmButtonText: 'Ok'
+    });
+  }
+
+  function darDeBaja() {
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "Esta acción dará de baja al usuario.",
+      icon: "warning",
+      input: "password",
+      inputPlaceholder: "Introduce tu contraseña",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, dar de baja",
+      cancelButtonText: "Cancelar",
+      preConfirm: (password) => {
+        if (!password) {
+          Swal.showValidationMessage("Debes ingresar la contraseña");
+        }
+        return password;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire("Éxito", "Usuario dado de baja correctamente", "success");
+      }
+    });
+  }
+</script>
+
+
+<%- include ('Plantilla/Final') %>

@@ -1,0 +1,306 @@
+<%- include ('Plantilla/Inicio') %>
+    <main id="nuevo-usuario" class="flex-1 p-4 md:p-6 bg-gray-100 bg-grid">
+    <!-- Encabezado -->
+    <section class="mb-6">
+        <h1 class="text-xl md:text-2xl font-semibold text-gray-900">Nuevo usuario</h1>
+        <p class="text-sm text-gray-500">Registra un usuario con información completa para control de acceso.</p>
+    </section>
+
+    <!-- Formulario -->
+    <section class="bg-white rounded-2xl border border-gray-200 p-5">
+        <form id="formNuevoUsuario" action="/newusuarios" method="post" class="grid grid-cols-1 gap-5" novalidate>
+        <!-- <input type="hidden" name="_csrf" value="TU_CSRF"> -->
+
+        <!-- Identidad -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+            <span class="text-sm text-gray-700">Nombre(s)</span>
+            <input name="nombre" id="nombre" type="text" maxlength="50" required
+                    placeholder="Ej. Juan Carlos"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Apellido paterno</span>
+            <input name="apellido_paterno" id="apellido_paterno" type="text" maxlength="50" required
+                    placeholder="Ej. Pérez"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Apellido materno</span>
+            <input name="apellido_materno" id="apellido_materno" type="text" maxlength="50" required
+                    placeholder="Ej. Gómez"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            </label>
+        </div>
+
+        <!-- Identificadores oficiales -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+            <span class="text-sm text-gray-700">CURP</span>
+            <input name="curp" id="curp" type="text" maxlength="18" minlength="18" required
+                    placeholder="18 caracteres (MAYÚSCULAS)"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 tracking-wider uppercase focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <small class="text-xs text-gray-500">Validación de formato incluida.</small>
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">RFC</span>
+            <input name="rfc" id="rfc" type="text" maxlength="13" minlength="12" required
+                    placeholder="12/13 caracteres (MAYÚSCULAS)"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 tracking-wider uppercase focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <small class="text-xs text-gray-500">Se normaliza a MAYÚSCULAS.</small>
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">NSS (IMSS)</span>
+            <input name="nss" id="nss" type="text" maxlength="11" minlength="11" required
+                    placeholder="11 dígitos"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            </label>
+        </div>
+
+        <!-- Contacto -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+            <span class="text-sm text-gray-700">Correo</span>
+            <input name="correo" id="correo" type="email" maxlength="100" required
+                    placeholder="usuario@empresa.com"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Teléfono</span>
+            <input name="telefono" id="telefono" type="tel" maxlength="20" required
+                    placeholder="+52 33 0000 0000"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Sexo</span>
+            <select name="sexo" id="sexo" required
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                <option value="">Selecciona…</option>
+                <option value="M">M</option>
+                <option value="F">F</option>
+                <option value="Otro">Otro</option>
+            </select>
+            </label>
+        </div>
+
+        <!-- Fecha, estado civil -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+            <span class="text-sm text-gray-700">Fecha de nacimiento</span>
+            <input name="fecha_nacimiento" id="fecha_nacimiento" type="date" required
+                    max=""
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <small class="text-xs text-gray-500">No se permiten fechas futuras.</small>
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Estado civil</span>
+            <select name="estado_civil" id="estado_civil" required
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                <option value="">Selecciona…</option>
+                <option value="Soltero">Soltero(a)</option>
+                <option value="Casado">Casado(a)</option>
+                <option value="Unión libre">Unión libre</option>
+                <option value="Divorciado">Divorciado(a)</option>
+                <option value="Viudo">Viudo(a)</option>
+                <!-- O usa input text si prefieres libre -->
+            </select>
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Tipo de usuario</span>
+            <select name="tipo_usuario" id="tipo_usuario" required
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                <option value="usuario" selected>usuario</option>
+                <option value="admin">admin</option>
+                <option value="proveedor">proveedor</option>
+            </select>
+            </label>
+        </div>
+
+        <!-- Domicilio -->
+        <div class="grid grid-cols-1">
+            <label class="block">
+            <span class="text-sm text-gray-700">Domicilio</span>
+            <textarea name="domicilio" id="domicilio" required rows="3" maxlength="2000"
+                        placeholder="Calle, número, colonia, ciudad, estado, CP"
+                        class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 resize-y focus:ring-2 focus:ring-blue-600 focus:border-blue-600"></textarea>
+            </label>
+        </div>
+
+        <!-- Contraseña -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+            <span class="text-sm text-gray-700">Contraseña</span>
+            <div class="relative mt-1">
+                <input name="password" id="password" type="password" minlength="8" required
+                    placeholder="Mínimo 8 caracteres"
+                    class="w-full rounded-lg border border-gray-200 px-3 py-2 pr-11 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                <button type="button" id="togglePass"
+                        class="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-gray-600"
+                        aria-label="Mostrar/Ocultar contraseña">👁️</button>
+            </div>
+            <div class="mt-2 h-1.5 w-full bg-gray-100 rounded">
+                <div id="passMeter" class="h-1.5 rounded bg-red-400" style="width: 0%;"></div>
+            </div>
+            <small id="passHint" class="text-xs text-gray-500">Usa mayúsculas, minúsculas, números y símbolo.</small>
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Confirmar contraseña</span>
+            <input id="password2" type="password" minlength="8" required
+                    placeholder="Repite la contraseña"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <small id="passMatch" class="text-xs text-gray-500">Debe coincidir.</small>
+            </label>
+
+            <label class="block">
+            <span class="text-sm text-gray-700">Activo</span>
+            <div class="mt-2 flex items-center gap-2">
+                <input name="activo" id="activo" type="checkbox" class="rounded border-gray-300 text-blue-600" checked>
+                <span class="text-sm text-gray-700">Usuario activo (1)</span>
+            </div>
+            <small class="text-xs text-gray-500">Si lo desmarcas se guarda como 0.</small>
+            </label>
+        </div>
+
+        <!-- Acciones -->
+        <div class="pt-2 flex items-center gap-2">
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+            Guardar usuario
+            </button>
+            <button type="reset"
+                    class="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+            Limpiar
+            </button>
+            <a href="/usuarios" class="ml-auto px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Cancelar</a>
+        </div>
+        </form>
+    </section>
+
+    <!-- JS de validación ligera (frontend) -->
+    <script>
+        // Fecha de nacimiento: máximo hoy
+        document.getElementById('fecha_nacimiento').max = new Date().toISOString().slice(0,10);
+
+        // Normalizaciones / máscaras
+        const elCURP = document.getElementById('curp');
+        const elRFC  = document.getElementById('rfc');
+        const elNSS  = document.getElementById('nss');
+        const elTel  = document.getElementById('telefono');
+
+        elCURP.addEventListener('input', () => { elCURP.value = elCURP.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0,18); });
+        elRFC.addEventListener('input',  () => { elRFC.value  = elRFC.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0,13);  });
+        elNSS.addEventListener('input',  () => { elNSS.value  = elNSS.value.replace(/\D/g, '').slice(0,11); });
+        elTel.addEventListener('input',  () => { elTel.value  = elTel.value.replace(/[^0-9+()\s-]/g, '').slice(0,20); });
+
+        // Validación de formato (aprox) CURP y RFC
+        function validCURP(v){
+        // 4 letras + 6 fecha + 1 sexo + 2 estado + 3 consonantes + 2 homoclave
+        return /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]{2}$/.test(v);
+        }
+        function validRFC(v){
+        // Persona moral (12) o física (13)
+        return /^([A-ZÑ&]{3}\d{6}[A-Z0-9]{3}|[A-ZÑ&]{4}\d{6}[A-Z0-9]{3})$/.test(v);
+        }
+
+        elCURP.addEventListener('blur', () => {
+        if (elCURP.value.length === 18 && !validCURP(elCURP.value)) {
+            elCURP.setCustomValidity('CURP con formato inválido');
+        } else {
+            elCURP.setCustomValidity('');
+        }
+        });
+        elRFC.addEventListener('blur', () => {
+        const len = elRFC.value.length;
+        if ((len === 12 || len === 13) && !validRFC(elRFC.value)) {
+            elRFC.setCustomValidity('RFC con formato inválido');
+        } else {
+            elRFC.setCustomValidity('');
+        }
+        });
+
+        // Password: mostrar/ocultar
+        const pass = document.getElementById('password');
+        const pass2 = document.getElementById('password2');
+        const toggle = document.getElementById('togglePass');
+        const meter = document.getElementById('passMeter');
+        const hint  = document.getElementById('passHint');
+        const match = document.getElementById('passMatch');
+
+        toggle.addEventListener('click', () => {
+        pass.type = pass.type === 'password' ? 'text' : 'password';
+        });
+
+        function scorePassword(p){
+        let s = 0;
+        if (p.length >= 8) s += 25;
+        if (/[A-Z]/.test(p)) s += 15;
+        if (/[a-z]/.test(p)) s += 15;
+        if (/\d/.test(p))   s += 20;
+        if (/[^A-Za-z0-9]/.test(p)) s += 25;
+        return Math.min(100, s);
+        }
+        pass.addEventListener('input', () => {
+        const sc = scorePassword(pass.value);
+        meter.style.width = sc + '%';
+        meter.className = 'h-1.5 rounded ' + (sc < 40 ? 'bg-red-400' : sc < 70 ? 'bg-yellow-400' : 'bg-green-500');
+        hint.textContent = sc < 70 ? 'Recomendado: agrega mayúsculas, números y símbolo.' : 'Buena contraseña.';
+        // comparar
+        if (pass2.value) {
+            pass2.setCustomValidity(pass.value === pass2.value ? '' : 'Las contraseñas no coinciden');
+            match.textContent = pass.value === pass2.value ? 'Coincide.' : 'No coincide.';
+            match.className = 'text-xs ' + (pass.value === pass2.value ? 'text-green-600' : 'text-red-600');
+        }
+        });
+        pass2.addEventListener('input', () => {
+        pass2.setCustomValidity(pass.value === pass2.value ? '' : 'Las contraseñas no coinciden');
+        match.textContent = pass.value === pass2.value ? 'Coincide.' : 'No coincide.';
+        match.className = 'text-xs ' + (pass.value === pass2.value ? 'text-green-600' : 'text-red-600');
+        });
+
+        // Activo checkbox -> valor 1/0 (para facilitar en el backend si lees como boolean)
+        const activo = document.getElementById('activo');
+        activo.addEventListener('change', () => {
+        // Si tu backend espera '1'/'0' explícito, puedes añadir un hidden sincronizado:
+        // document.getElementById('activoHidden').value = activo.checked ? 1 : 0;
+        });
+
+        // Submit: validaciones finales (opcional)
+        document.getElementById('formNuevoUsuario').addEventListener('submit', (e) => {
+        if (!e.target.checkValidity()) {
+            // deja que el navegador muestre los mensajes nativos
+            return;
+        }
+        // aquí puedes hacer fetch si quieres AJAX, o dejar que haga POST normal
+        // e.preventDefault();
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%if (typeof alert != "undefined") { %>
+        <script>
+            Swal.fire({
+                title: '<%= alertTitle %>',
+                text: '<%= alertMessage %>',
+                icon: '<%= alertIcon %>',
+                showConfirmButton: '<% showConfirmButton %>', 
+                timer: '<%= timer %>' 
+            }).then(() => {
+                window.location = '/<%= ruta %>';
+            });
+        </script>
+    <% } %>
+
+
+    
+    </main>
+
+<%- include ('Plantilla/Final') %>

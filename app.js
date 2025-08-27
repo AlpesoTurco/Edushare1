@@ -2,6 +2,12 @@ const express = require('express');
 const app = express();
 const path = require('path'); // Agrega esta línea para utilizar el módulo 'path'
 const multer = require('multer');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+
+//JWT Middleware 
+app.use(cookieParser());
+
 
 app.use(express.urlencoded({extended:false}));
 app.use(express.json());
@@ -13,6 +19,7 @@ app.use('/resources', express.static('public'));
 app.use('/resources', express.static(__dirname + 'public'));
 
 app.set("view engine", "ejs");
+app.set('views', path.join(__dirname, 'views'));
 
 const bcryptjs = require ('bcryptjs');
 const { Session } = require('express-session');
@@ -33,7 +40,7 @@ console.log(__dirname)
 app.use('/', require('./router'));
 
 //Acciones
-app.use('/', require('./controller'));
+app.use('/', require('./controllers/controller'));
 
 
 //Servidor funcionando en el puerto 3000 
