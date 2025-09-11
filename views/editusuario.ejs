@@ -1,4 +1,18 @@
 <%- include ('Plantilla/Inicio') %>
+
+    <%
+    // Evita ReferenceError si no te mandaron la variable
+    const hasUsuario = (typeof usuario !== 'undefined' && usuario);
+    const u = hasUsuario ? usuario : null;
+
+    const foto = u?.foto || `https://i.pravatar.cc/150?u=${u?.id_usuario || 'default'}`;
+    const fechaNac = u?.fecha_nacimiento
+    ? new Date(u.fecha_nacimiento).toLocaleDateString('es-MX')
+    : '—';
+    const activo = (u?.activo === 1 || u?.activo === true);
+    %>
+
+
     <main id="nuevo-usuario" class="flex-1 p-4 md:p-6 bg-gray-100 bg-grid">
     <!-- Encabezado -->
     <section class="mb-6">
@@ -8,30 +22,36 @@
 
     <!-- Formulario -->
     <section class="bg-white rounded-2xl border border-gray-200 p-5">
-        <form id="formNuevoUsuario" action="/newusuarios" method="post" class="grid grid-cols-1 gap-5" novalidate>
+        <form id="formNuevoUsuario" action="/updateusuarios" method="post" class="grid grid-cols-1 gap-5" >
         <!-- <input type="hidden" name="_csrf" value="TU_CSRF"> -->
-
+            <input name="id_usuario" id="id_usuario" type="text"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.id_usuario %>" hidden>
+            </label>
         <!-- Identidad -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label class="block">
             <span class="text-sm text-gray-700">Nombre(s)</span>
             <input name="nombre" id="nombre" type="text" maxlength="50" required
                     placeholder="Ej. Juan Carlos"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.nombre %>">
             </label>
 
             <label class="block">
             <span class="text-sm text-gray-700">Apellido paterno</span>
             <input name="apellido_paterno" id="apellido_paterno" type="text" maxlength="50" required
                     placeholder="Ej. Pérez"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.apellido_paterno %>">
             </label>
 
             <label class="block">
             <span class="text-sm text-gray-700">Apellido materno</span>
             <input name="apellido_materno" id="apellido_materno" type="text" maxlength="50" required
                     placeholder="Ej. Gómez"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.apellido_materno %>">
             </label>
         </div>
 
@@ -41,7 +61,8 @@
             <span class="text-sm text-gray-700">CURP</span>
             <input name="curp" id="curp" type="text" maxlength="18" minlength="18" required
                     placeholder="18 caracteres (MAYÚSCULAS)"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 tracking-wider uppercase focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 tracking-wider uppercase focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.curp %>">
             <small class="text-xs text-gray-500">Validación de formato incluida.</small>
             </label>
 
@@ -49,7 +70,8 @@
             <span class="text-sm text-gray-700">RFC</span>
             <input name="rfc" id="rfc" type="text" maxlength="13" minlength="12" required
                     placeholder="12/13 caracteres (MAYÚSCULAS)"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 tracking-wider uppercase focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 tracking-wider uppercase focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.rfc %>">
             <small class="text-xs text-gray-500">Se normaliza a MAYÚSCULAS.</small>
             </label>
 
@@ -57,7 +79,8 @@
             <span class="text-sm text-gray-700">NSS (IMSS)</span>
             <input name="nss" id="nss" type="text" maxlength="11" minlength="11" required
                     placeholder="11 dígitos"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.nss %>">
             </label>
         </div>
 
@@ -67,36 +90,43 @@
             <span class="text-sm text-gray-700">Correo</span>
             <input name="correo" id="correo" type="email" maxlength="100" required
                     placeholder="usuario@empresa.com"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.correo %>">
             </label>
 
             <label class="block">
             <span class="text-sm text-gray-700">Teléfono</span>
             <input name="telefono" id="telefono" type="tel" maxlength="20" required
                     placeholder="+52 33 0000 0000"
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    value="<%= u?.telefono %>">
             </label>
 
             <label class="block">
             <span class="text-sm text-gray-700">Sexo</span>
-            <select name="sexo" id="sexo" required
-                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-                <option value="">Selecciona…</option>
-                <option value="M">M</option>
-                <option value="F">F</option>
-                <option value="Otro">Otro</option>
-            </select>
+                <select name="sexo" id="sexo" required
+                        class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                    <option value="">Selecciona…</option>
+                    <option value="M" <%= u?.sexo === 'M' ? 'selected' : '' %>>M</option>
+                    <option value="F" <%= u?.sexo === 'F' ? 'selected' : '' %>>F</option>
+                    <option value="Otro" <%= u?.sexo === 'Otro' ? 'selected' : '' %>>Otro</option>
+                </select>
             </label>
         </div>
 
         <!-- Fecha, estado civil -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label class="block">
-            <span class="text-sm text-gray-700">Fecha de nacimiento</span>
-            <input name="fecha_nacimiento" id="fecha_nacimiento" type="date" required
-                    max=""
+                <span class="text-sm text-gray-700">Fecha de nacimiento</span>
+                <input 
+                    name="fecha_nacimiento" 
+                    id="fecha_nacimiento" 
+                    type="date" 
+                    required
+                    max="<%= new Date().toISOString().split('T')[0] %>"   
+                    value="<%= u?.fecha_nacimiento ? new Date(u.fecha_nacimiento).toISOString().split('T')[0] : '' %>"
                     class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-            <small class="text-xs text-gray-500">No se permiten fechas futuras.</small>
+                <small class="text-xs text-gray-500">No se permiten fechas futuras.</small>
             </label>
 
             <label class="block">
@@ -104,38 +134,40 @@
             <select name="estado_civil" id="estado_civil" required
                     class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                 <option value="">Selecciona…</option>
-                <option value="Soltero">Soltero(a)</option>
-                <option value="Casado">Casado(a)</option>
-                <option value="Unión libre">Unión libre</option>
-                <option value="Divorciado">Divorciado(a)</option>
-                <option value="Viudo">Viudo(a)</option>
-                <!-- O usa input text si prefieres libre -->
+                <option value="Soltero"    <%= u?.estado_civil === 'Soltero' ? 'selected' : '' %>>Soltero(a)</option>
+                <option value="Casado"     <%= u?.estado_civil === 'Casado' ? 'selected' : '' %>>Casado(a)</option>
+                <option value="Unión libre" <%= u?.estado_civil === 'Unión libre' ? 'selected' : '' %>>Unión libre</option>
+                <option value="Divorciado" <%= u?.estado_civil === 'Divorciado' ? 'selected' : '' %>>Divorciado(a)</option>
+                <option value="Viudo"      <%= u?.estado_civil === 'Viudo' ? 'selected' : '' %>>Viudo(a)</option>
             </select>
             </label>
+
 
             <label class="block">
             <span class="text-sm text-gray-700">Tipo de usuario</span>
             <select name="tipo_usuario" id="tipo_usuario" required
                     class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-                <option value="usuario" selected>usuario</option>
-                <option value="admin">admin</option>
-                <option value="proveedor">proveedor</option>
+                <option value="usuario"   <%= u?.tipo_usuario === 'usuario' ? 'selected' : '' %>>usuario</option>
+                <option value="admin"     <%= u?.tipo_usuario === 'admin' ? 'selected' : '' %>>admin</option>
+                <option value="proveedor" <%= u?.tipo_usuario === 'proveedor' ? 'selected' : '' %>>proveedor</option>
             </select>
             </label>
+
         </div>
 
         <!-- Domicilio -->
         <div class="grid grid-cols-1">
-            <label class="block">
+        <label class="block">
             <span class="text-sm text-gray-700">Domicilio</span>
             <textarea name="domicilio" id="domicilio" required rows="3" maxlength="2000"
-                        placeholder="Calle, número, colonia, ciudad, estado, CP"
-                        class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 resize-y focus:ring-2 focus:ring-blue-600 focus:border-blue-600"></textarea>
-            </label>
+                    placeholder="Calle, número, colonia, ciudad, estado, CP"
+                    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 resize-y focus:ring-2 focus:ring-blue-600 focus:border-blue-600"><%= u?.domicilio || '' %></textarea>
+        </label>
         </div>
 
+
         <!-- Contraseña -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label class="block">
             <span class="text-sm text-gray-700">Contraseña</span>
             <div class="relative mt-1">
@@ -168,13 +200,13 @@
             </div>
             <small class="text-xs text-gray-500">Si lo desmarcas se guarda como 0.</small>
             </label>
-        </div>
+        </div> -->
 
         <!-- Acciones -->
         <div class="pt-2 flex items-center gap-2">
             <button type="submit"
                     class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
-            Guardar usuario
+            Actualizar usuario
             </button>
             <button type="reset"
                     class="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">

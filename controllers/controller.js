@@ -7,6 +7,392 @@ const bcrypt = require('bcryptjs');
 
 controller.use('/', require('./login_controller'));
 
+controller.post('/acceso/abrir', (req, res) => {
+  const { id_usuario, motivo } = req.body;
+  if (!id_usuario || !motivo) {
+    return res.status(400).json({ ok: false, msg: 'Faltan datos' });
+  }
+
+  // Fecha y hora en CDMX
+  const nowCdmx = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' })
+  );
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const fecha = `${nowCdmx.getFullYear()}-${pad(nowCdmx.getMonth() + 1)}-${pad(nowCdmx.getDate())}`;
+  const hora = `${pad(nowCdmx.getHours())}:${pad(nowCdmx.getMinutes())}:${pad(nowCdmx.getSeconds())}`;
+
+  // Día de la semana en español
+  const dia_semana = nowCdmx
+    .toLocaleDateString('es-MX', { weekday: 'long', timeZone: 'America/Mexico_City' })
+    .toLowerCase();
+
+  // Insert en asistencias
+  const sqlAsistencia = `
+    INSERT INTO asistencias
+      (id_usuario, id_dispositivo, fecha, hora, dia_semana, registro_manual, observaciones)
+    VALUES
+      (?, 1, ?, ?, ?, 1, ?)
+  `;
+
+  connections.query(sqlAsistencia, [id_usuario, fecha, hora, dia_semana, motivo], (err, result) => {
+    if (err) {
+      console.error('Error al insertar asistencia:', err);
+      return res.status(500).json({ ok: false, msg: 'Error al registrar asistencia' });
+    }
+
+    const at = new Date().toISOString();
+    return res.json({
+      ok: true,
+      at,
+      asistencia_id: result.insertId,
+      fecha,
+      hora,
+      dia_semana,
+    });
+  });
+});
+
+
+
+// POST: guardar o actualizar asignación en la tabla puesto
+controller.post('/puestos/asignar', (req, res) => {
+  const { id_usuario, nombre_puesto, id_horario } = req.body;
+  if (!id_usuario || !nombre_puesto || !id_horario) {
+    return res.status(400).send('Faltan datos');
+  }
+
+  const sqlUpsert = `
+    INSERT INTO puesto (nombre_puesto, id_horario, id_usuariofk)
+    VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      nombre_puesto = VALUES(nombre_puesto),
+      id_horario    = VALUES(id_horario)
+  `;
+
+  connections.query(sqlUpsert, [nombre_puesto, id_horario, id_usuario], (err) => {
+    if (err) {
+      console.error('Error al asignar/actualizar puesto:', err);
+      return res.status(500).send('Error al asignar horario');
+    }
+    res.redirect(`/perfil/${id_usuario}`);
+  });
+});
+
+
+
+// Eliminar un horario semanal
+controller.delete('/horarios-semanales/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ ok:false, msg:'ID inválido' });
+
+  connections.query('DELETE FROM horarios_semanales WHERE id_horario = ? LIMIT 1', [id],
+    (err, result) => {
+      if (err) return res.status(500).json({ ok:false, msg:'Error del servidor al eliminar' });
+      if (result.affectedRows === 0) return res.status(404).json({ ok:false, msg:'Horario no encontrado' });
+      return res.json({ ok:true, msg:'Horario eliminado' });
+    }
+  );
+});
+
+
+
+// Helpers
+function parseActivo(val) {
+  // checkbox "on", "1", 1, true => 1 ; cualquier otra cosa => 0
+  if (val === 1 || val === '1' || val === true || val === 'true' || val === 'on' || val === 'ON') return 1;
+  return 0;
+}
+function nullIfEmpty(v) {
+  return (v === undefined || v === null || String(v).trim() === '') ? null : String(v).trim();
+}
+function isValidTimeOrNull(v) {
+  if (v == null || v === '') return true;
+  // Acepta HH:MM o HH:MM:SS (el input <time> envía HH:MM)
+  return /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(v);
+}
+
+// =================== CREAR NUEVO HORARIO ===================
+controller.post('/horarios-semanales/new', (req, res) => {
+  try {
+    // 1) Extraer body
+    let {
+      nombre,
+      activo,
+
+      lun_entrada,  lun_comida_ini,  lun_comida_fin,  lun_salida,
+      mar_entrada,  mar_comida_ini,  mar_comida_fin,  mar_salida,
+      mie_entrada,  mie_comida_ini,  mie_comida_fin,  mie_salida,
+      jue_entrada,  jue_comida_ini,  jue_comida_fin,  jue_salida,
+      vie_entrada,  vie_comida_ini,  vie_comida_fin,  vie_salida,
+      sab_entrada,  sab_comida_ini,  sab_comida_fin,  sab_salida,
+      dom_entrada,  dom_comida_ini,  dom_comida_fin,  dom_salida
+    } = req.body;
+
+    // 2) Normalizaciones y nulls
+    nombre = (nombre || '').trim();
+    activo = parseActivo(activo);
+
+    // Pasar vacíos a null
+    const fields = {
+      lun_entrada: nullIfEmpty(lun_entrada),
+      lun_comida_ini: nullIfEmpty(lun_comida_ini),
+      lun_comida_fin: nullIfEmpty(lun_comida_fin),
+      lun_salida: nullIfEmpty(lun_salida),
+
+      mar_entrada: nullIfEmpty(mar_entrada),
+      mar_comida_ini: nullIfEmpty(mar_comida_ini),
+      mar_comida_fin: nullIfEmpty(mar_comida_fin),
+      mar_salida: nullIfEmpty(mar_salida),
+
+      mie_entrada: nullIfEmpty(mie_entrada),
+      mie_comida_ini: nullIfEmpty(mie_comida_ini),
+      mie_comida_fin: nullIfEmpty(mie_comida_fin),
+      mie_salida: nullIfEmpty(mie_salida),
+
+      jue_entrada: nullIfEmpty(jue_entrada),
+      jue_comida_ini: nullIfEmpty(jue_comida_ini),
+      jue_comida_fin: nullIfEmpty(jue_comida_fin),
+      jue_salida: nullIfEmpty(jue_salida),
+
+      vie_entrada: nullIfEmpty(vie_entrada),
+      vie_comida_ini: nullIfEmpty(vie_comida_ini),
+      vie_comida_fin: nullIfEmpty(vie_comida_fin),
+      vie_salida: nullIfEmpty(vie_salida),
+
+      sab_entrada: nullIfEmpty(sab_entrada),
+      sab_comida_ini: nullIfEmpty(sab_comida_ini),
+      sab_comida_fin: nullIfEmpty(sab_comida_fin),
+      sab_salida: nullIfEmpty(sab_salida),
+
+      dom_entrada: nullIfEmpty(dom_entrada),
+      dom_comida_ini: nullIfEmpty(dom_comida_ini),
+      dom_comida_fin: nullIfEmpty(dom_comida_fin),
+      dom_salida: nullIfEmpty(dom_salida)
+    };
+
+    // 3) Validaciones mínimas
+    if (!nombre || nombre.length > 60) {
+      return res.status(400).json({ ok: false, msg: 'El nombre es requerido y debe tener máximo 60 caracteres.' });
+    }
+
+    // Validar formato de hora (si viene)
+    for (const [k, v] of Object.entries(fields)) {
+      if (!isValidTimeOrNull(v)) {
+        return res.status(400).json({ ok: false, msg: `Formato de hora inválido en ${k} (usa HH:MM).` });
+      }
+    }
+
+    // (Opcional) exigir al menos un día con entrada/salida
+    // const algunDiaConTurno = [
+    //   'lun','mar','mie','jue','vie','sab','dom'
+    // ].some(d => fields[`${d}_entrada`] && fields[`${d}_salida`]);
+    // if (!algunDiaConTurno) {
+    //   return res.status(400).json({ ok:false, msg:'Captura al menos un día con entrada y salida.' });
+    // }
+
+    // 4) Query parametrizada (orden de columnas explícito)
+    const sql = `
+      INSERT INTO horarios_semanales (
+        nombre_horario, activo,
+        lun_entrada, lun_comida_ini, lun_comida_fin, lun_salida,
+        mar_entrada, mar_comida_ini, mar_comida_fin, mar_salida,
+        mie_entrada, mie_comida_ini, mie_comida_fin, mie_salida,
+        jue_entrada, jue_comida_ini, jue_comida_fin, jue_salida,
+        vie_entrada, vie_comida_ini, vie_comida_fin, vie_salida,
+        sab_entrada, sab_comida_ini, sab_comida_fin, sab_salida,
+        dom_entrada, dom_comida_ini, dom_comida_fin, dom_salida
+      ) VALUES (?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?)
+    `;
+
+    const values = [
+      nombre, activo,
+      fields.lun_entrada, fields.lun_comida_ini, fields.lun_comida_fin, fields.lun_salida,
+      fields.mar_entrada, fields.mar_comida_ini, fields.mar_comida_fin, fields.mar_salida,
+      fields.mie_entrada, fields.mie_comida_ini, fields.mie_comida_fin, fields.mie_salida,
+      fields.jue_entrada, fields.jue_comida_ini, fields.jue_comida_fin, fields.jue_salida,
+      fields.vie_entrada, fields.vie_comida_ini, fields.vie_comida_fin, fields.vie_salida,
+      fields.sab_entrada, fields.sab_comida_ini, fields.sab_comida_fin, fields.sab_salida,
+      fields.dom_entrada, fields.dom_comida_ini, fields.dom_comida_fin, fields.dom_salida
+    ];
+
+    connections.query(sql, values, (err, result) => {
+      if (err) {
+        console.error('Error al insertar horario:', err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          // UNIQUE(nombre) violado
+          return res.status(409).json({ ok: false, msg: 'Ya existe un horario con ese nombre.' });
+        }
+        return res.status(500).json({ ok: false, msg: 'Error del servidor al guardar el horario.' });
+      }
+      return res.json({ ok: true, id_horario: result.insertId });
+    });
+  } catch (e) {
+    console.error('Error en /horarios-semanales/new:', e);
+    return res.status(500).json({ ok: false, msg: 'Error del servidor' });
+  }
+});
+
+
+controller.post('/updateusuarios', async (req, res) => {
+  try {
+    let {
+      id_usuario,
+      nombre,
+      apellido_paterno,
+      apellido_materno,
+      curp,
+      rfc,
+      nss,
+      correo,
+      password,          // opcional al editar
+      telefono,
+      sexo,
+      fecha_nacimiento,
+      estado_civil,
+      domicilio,
+      tipo_usuario
+    } = req.body;
+
+    // 1) Validaciones básicas
+    if (!id_usuario) {
+      return res.status(400).send('Falta id_usuario');
+    }
+
+    // Checkbox "activo" → 1/0
+    const activo = req.body.activo ? 1 : 0;
+
+    // 2) Normalizaciones
+    nombre = (nombre || '').trim();
+    apellido_paterno = (apellido_paterno || '').trim();
+    apellido_materno = (apellido_materno || '').trim();
+    curp = (curp || '').toUpperCase().trim();
+    rfc = (rfc || '').toUpperCase().trim();
+    nss = (nss || '').replace(/\D/g, '').trim();
+    correo = (correo || '').toLowerCase().trim();
+    telefono = (telefono || '').trim();
+    sexo = (sexo || '').trim();
+    fecha_nacimiento = (fecha_nacimiento || '').trim();
+    estado_civil = (estado_civil || '').trim();
+    domicilio = (domicilio || '').trim();
+    tipo_usuario = (tipo_usuario || 'usuario').trim();
+
+    // 3) Validación de campos requeridos (salvo password)
+    const camposObligatorios = [
+      { nombre: "Nombre", valor: nombre },
+      { nombre: "Apellido Paterno", valor: apellido_paterno },
+      { nombre: "Apellido Materno", valor: apellido_materno },
+      { nombre: "CURP", valor: curp },
+      { nombre: "RFC", valor: rfc },
+      { nombre: "NSS", valor: nss },
+      { nombre: "Correo", valor: correo },
+      { nombre: "Teléfono", valor: telefono },
+      { nombre: "Sexo", valor: sexo },
+      { nombre: "Fecha de nacimiento", valor: fecha_nacimiento },
+      { nombre: "Estado Civil", valor: estado_civil },
+      { nombre: "Domicilio", valor: domicilio },
+      { nombre: "Tipo de usuario", valor: tipo_usuario }
+    ];
+
+    const campoVacio = camposObligatorios.find(c => !c.valor || c.valor.trim() === "");
+    if (campoVacio) {
+      return res.render("editusuario", {
+        alert: true,
+        alertTitle: "Campo requerido",
+        alertMessage: `El campo "${campoVacio.nombre}" no puede estar vacío`,
+        alertIcon: "warning",
+        showConfirmButton: true,
+        timer: 3000,
+        ruta: "editusuario/${id_usuario}",
+        user: req.user || { nombre: "Invitado" }
+      });
+    }
+
+    // 4) Construir UPDATE dinámico (password solo si se envía)
+    const fields = [
+      'nombre = ?',
+      'apellido_paterno = ?',
+      'apellido_materno = ?',
+      'curp = ?',
+      'rfc = ?',
+      'nss = ?',
+      'correo = ?',
+      'telefono = ?',
+      'sexo = ?',
+      'fecha_nacimiento = ?',
+      'estado_civil = ?',
+      'domicilio = ?',
+      'activo = ?',
+      'tipo_usuario = ?'
+    ];
+
+    const values = [
+      nombre,
+      apellido_paterno,
+      apellido_materno,
+      curp,
+      rfc,
+      nss,
+      correo,
+      telefono,
+      sexo,
+      fecha_nacimiento,
+      estado_civil,
+      domicilio,
+      activo,
+      tipo_usuario
+    ];
+
+    // Si password viene (no vacío), lo hasheamos y actualizamos
+    if (password && password.trim() !== '') {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      fields.push('password = ?');
+      values.push(hashedPassword);
+    }
+
+    values.push(id_usuario);
+
+    const sql = `
+      UPDATE usuarios
+      SET ${fields.join(', ')}
+      WHERE id_usuario = ?
+      LIMIT 1
+    `;
+
+    connections.query(sql, values, (err, result) => {
+      if (err) {
+        console.error('Error al actualizar usuario:', err);
+        // ER_DUP_ENTRY (únicos: curp/rfc/correo, etc.)
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).render("editarusuario", {
+            alert: true,
+            alertTitle: "Datos duplicados",
+            alertMessage: "CURP/RFC/Correo ya están registrados en otro usuario.",
+            alertIcon: "error",
+            showConfirmButton: true,
+            timer: 4000,
+            ruta: `usuarios/${id_usuario}/editar`,
+            usuario: {
+              id_usuario, nombre, apellido_paterno, apellido_materno, curp, rfc, nss,
+              correo, telefono, sexo, fecha_nacimiento, estado_civil, domicilio,
+              activo, tipo_usuario
+            }
+          });
+        }
+        return res.status(500).send('Error del servidor al actualizar');
+      }
+
+      // OK -> redirige al listado o al perfil
+      return res.redirect(`/perfil/${id_usuario}`);
+      // o: return res.redirect('/usuarios');
+    });
+
+  } catch (error) {
+    console.error('Error en /updateusuarios:', error);
+    return res.status(500).send('Error del servidor');
+  }
+});
+
 controller.post('/newusuarios', async (req, res) => {
   try {
     let {
@@ -45,21 +431,40 @@ controller.post('/newusuarios', async (req, res) => {
     domicilio = (domicilio || '').trim();
     tipo_usuario = (tipo_usuario || 'usuario').trim();
 
-    // Validar que la contraseña exista y tenga mínimo 8 caracteres
-    if (!password || password.length < 8) {
-      res.render('login', {
-          alert: true,
-          alertTitle: "Contraseña no segura",
-          alertMessage: "Elige una contraseña mayor a 8 caracteres",
-          alertIcon: "info",
-          showConfirmButton: false,
-          timer: 3000,
-          ruta: 'nuevousuario'
+    // Validación de campos vacíos
+    const camposObligatorios = [
+      { nombre: "Nombre", valor: nombre },
+      { nombre: "Apellido Paterno", valor: apellido_paterno },
+      { nombre: "Apellido Materno", valor: apellido_materno },
+      { nombre: "CURP", valor: curp },
+      { nombre: "RFC", valor: rfc },
+      { nombre: "NSS", valor: nss },
+      { nombre: "Correo", valor: correo },
+      { nombre: "Contraseña", valor: password },
+      { nombre: "Teléfono", valor: telefono },
+      { nombre: "Sexo", valor: sexo },
+      { nombre: "Fecha de nacimiento", valor: fecha_nacimiento },
+      { nombre: "Estado Civil", valor: estado_civil },
+      { nombre: "Domicilio", valor: domicilio },
+      { nombre: "Tipo de usuario", valor: tipo_usuario }
+    ];
+
+    const campoVacio = camposObligatorios.find(c => !c.valor || c.valor.trim() === "");
+
+    if (campoVacio) {
+      return res.render("nuevousuario", {
+        alert: true,
+        alertTitle: "Campo requerido",
+        alertMessage: `El campo "${campoVacio.nombre}" no puede estar vacío`,
+        alertIcon: "warning",
+        showConfirmButton: true,
+        timer: 3000,
+        ruta: "nuevousuario",
+        user: req.user || { nombre: "Invitado" }
       });
-    } else {
+    }
 
     
-
 
       // Hash de la contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -96,13 +501,21 @@ controller.post('/newusuarios', async (req, res) => {
       connections.query(sql, values, (err, result) => {
         if (err) {
           console.error('Error al insertar usuario:', err);
-          return res.status(500).send('Error al registrar usuario');
+          return res.render("nuevousuario", {
+            alert: true,
+            alertTitle: "Revise los datos",
+            alertMessage: `Datos incorrectos, posible confusion de datos personales`,
+            alertIcon: "error",
+            showConfirmButton: true,
+            timer: 3000,
+            ruta: "nuevousuario",
+            user: req.user || { nombre: "Invitado" }
+          });
         }
 
         // Usuario insertado correctamente
         return res.redirect('/usuarios'); // O renderiza un mensaje de éxito
       });
-    }
 
   } catch (error) {
     console.error('Error en /nuevousuario:', error);
@@ -110,227 +523,6 @@ controller.post('/newusuarios', async (req, res) => {
   }
 });
 
-
-// controller.post('/newusuarios', async (req, res) => {
-//   try {
-//     // 1) Tomar datos del body
-//     let {
-//       nombre,
-//       apellido_paterno,
-//       apellido_materno,
-//       curp,
-//       rfc,
-//       nss,
-//       correo,
-//       password,
-//       telefono,
-//       sexo,
-//       fecha_nacimiento,
-//       estado_civil,
-//       domicilio,
-//       tipo_usuario
-//     } = req.body;
-
-//     // Checkbox "activo" → 1/0
-//     const activo = req.body.activo ? 1 : 0;
-
-//     // 2) Normalizaciones
-//     nombre = (nombre || '').trim();
-//     apellido_paterno = (apellido_paterno || '').trim();
-//     apellido_materno = (apellido_materno || '').trim();
-//     curp = (curp || '').toUpperCase().trim();
-//     rfc = (rfc || '').toUpperCase().trim();
-//     nss = (nss || '').replace(/\D/g, '').trim();
-//     correo = (correo || '').toLowerCase().trim();
-//     telefono = (telefono || '').trim();
-//     sexo = (sexo || '').trim();
-//     fecha_nacimiento = (fecha_nacimiento || '').trim();
-//     estado_civil = (estado_civil || '').trim();
-//     domicilio = (domicilio || '').trim();
-//     tipo_usuario = (tipo_usuario || 'usuario').trim();
-
-//     // 3) Validaciones básicas (server-side)
-//     const errores = [];
-
-//     // Reglas similares a tu JS del frontend:
-//     const regexCURP = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]{2}$/;
-//     const regexRFC  = /^([A-ZÑ&]{3}\d{6}[A-Z0-9]{3}|[A-ZÑ&]{4}\d{6}[A-Z0-9]{3})$/;
-
-//     if (!nombre) errores.push('Nombre es obligatorio.');
-//     if (!apellido_paterno) errores.push('Apellido paterno es obligatorio.');
-//     if (!apellido_materno) errores.push('Apellido materno es obligatorio.');
-
-//     if (!(curp && curp.length === 18 && regexCURP.test(curp))) {
-//       errores.push('CURP con formato inválido.');
-//     }
-//     if (!((rfc.length === 12 || rfc.length === 13) && regexRFC.test(rfc))) {
-//       errores.push('RFC con formato inválido.');
-//     }
-//     if (!(nss && nss.length === 11)) {
-//       errores.push('NSS debe tener 11 dígitos.');
-//     }
-
-//     if (!correo) errores.push('Correo es obligatorio.');
-//     if (!telefono) errores.push('Teléfono es obligatorio.');
-
-//     if (!['M', 'F', 'Otro'].includes(sexo)) {
-//       errores.push('Sexo inválido.');
-//     }
-
-//     if (!fecha_nacimiento) {
-//       errores.push('Fecha de nacimiento es obligatoria.');
-//     } else {
-//       const hoy = new Date();
-//       const fn = new Date(fecha_nacimiento);
-//       if (isNaN(fn.getTime()) || fn > hoy) {
-//         errores.push('Fecha de nacimiento no puede ser futura.');
-//       }
-//     }
-
-//     if (!estado_civil) errores.push('Estado civil es obligatorio.');
-//     if (!domicilio) errores.push('Domicilio es obligatorio.');
-
-//     if (!['usuario', 'admin', 'proveedor'].includes(tipo_usuario)) {
-//       errores.push('Tipo de usuario inválido.');
-//     }
-
-//     if (!password || password.length < 8) {
-//       errores.push('La contraseña debe tener mínimo 8 caracteres.');
-//     }
-
-//     // (Opcional) Si agregas name="password2" en el form, puedes validar coincidencia:
-//     if (req.body.password2 && req.body.password2 !== password) {
-//       errores.push('Las contraseñas no coinciden.');
-//     }
-
-//     if (errores.length) {
-//       // Re-render del formulario con valores previos y alerta
-//       return res.status(400).render('usuarios', {
-//         alert: true,
-//         alertTitle: 'Datos inválidos',
-//         alertMessage: errores.join(' '),
-//         alertIcon: 'error',
-//         showConfirmButton: true,
-//         timer: 2000,
-//         ruta: 'usuarios',
-//         // Reenvía lo que el user ya llenó para no perderlo
-//         form: {
-//           nombre, apellido_paterno, apellido_materno,
-//           curp, rfc, nss, correo, telefono, sexo,
-//           fecha_nacimiento, estado_civil, domicilio, activo, tipo_usuario
-//         }
-//       });
-//     }
-
-//     // 4) Hash de contraseña
-//     const salt = await bcrypt.genSalt(10);
-//     const passHash = await bcrypt.hash(password, salt);
-
-//     // 5) INSERT parametrizado (en el mismo orden que tus columnas NOT NULL)
-//     const sql = `
-//       INSERT INTO usuarios (
-//         nombre,
-//         apellido_paterno,
-//         apellido_materno,
-//         curp,
-//         rfc,
-//         nss,
-//         correo,
-//         password,
-//         telefono,
-//         sexo,
-//         fecha_nacimiento,
-//         estado_civil,
-//         domicilio,
-//         activo,
-//         tipo_usuario
-//       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-//     `;
-
-//     const params = [
-//       nombre,
-//       apellido_paterno,
-//       apellido_materno,
-//       curp,
-//       rfc,
-//       nss,
-//       correo,
-//       passHash,
-//       telefono,
-//       sexo,
-//       fecha_nacimiento,
-//       estado_civil,
-//       domicilio,
-//       activo,
-//       tipo_usuario
-//     ];
-
-//     connections.query(sql, params, (error, result) => {
-//       if (error) {
-//         // Duplicados por UNIQUE (curp/rfc/correo, etc.)
-//         if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
-//           // Encontrar cuál índice falló (intenta parsear el mensaje)
-//           let campo = 'Alguno de los campos únicos';
-//           const m = /for key '([^']+)'/i.exec(error.sqlMessage || '');
-//           if (m && m[1]) campo = `Índice único: ${m[1]}`;
-//           return res.status(409).render('usuarios', {
-//             alert: true,
-//             alertTitle: 'Duplicado',
-//             alertMessage: `Ya existe un registro con el mismo dato (${campo}).`,
-//             alertIcon: 'warning',
-//             showConfirmButton: true,
-//             timer: 2000,
-//             ruta: 'usuarios',
-//             form: {
-//               nombre, apellido_paterno, apellido_materno,
-//               curp, rfc, nss, correo, telefono, sexo,
-//               fecha_nacimiento, estado_civil, domicilio, activo, tipo_usuario
-//             }
-//           });
-//         }
-
-//         console.error('Error en INSERT usuarios:', error);
-//         return res.status(500).render('usuarios', {
-//           alert: true,
-//           alertTitle: 'Error del servidor',
-//           alertMessage: 'No se pudo guardar el usuario.',
-//           alertIcon: 'error',
-//           showConfirmButton: true,
-//           timer: 1800,
-//           ruta: 'usuarios',
-//           form: {
-//             nombre, apellido_paterno, apellido_materno,
-//             curp, rfc, nss, correo, telefono, sexo,
-//             fecha_nacimiento, estado_civil, domicilio, activo, tipo_usuario
-//           }
-//         });
-//       }
-
-//       // 6) Éxito
-//       return res.status(201).render('login', {
-//         alert: true,
-//         alertTitle: '¡Guardado!',
-//         alertMessage: 'Usuario registrado correctamente.',
-//         alertIcon: 'success',
-//         showConfirmButton: false,
-//         timer: 1500,
-//         ruta: 'usuarios' // o '' si prefieres ir al home
-//       });
-//     });
-
-//   } catch (err) {
-//     console.error('Excepción en /usuarios:', err);
-//     return res.status(500).render('usuarios', {
-//       alert: true,
-//       alertTitle: 'Error inesperado',
-//       alertMessage: 'Ocurrió un problema al procesar la solicitud.',
-//       alertIcon: 'error',
-//       showConfirmButton: true,
-//       timer: 1800,
-//       ruta: 'usuarios'
-//     });
-//   }
-// });
 
 
 

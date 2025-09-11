@@ -63,68 +63,227 @@
   </section>
 
   <!-- Horarios y Festivos -->
-  <section class="bg-white rounded-2xl border border-gray-200 p-4">
-    <h2 class="text-lg font-semibold text-gray-900 mb-3">Horarios & Festivos</h2>
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-      <label class="md:col-span-4">
-        <span class="text-sm text-gray-700">Horario (Schedule)</span>
-        <select id="scheduleSelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
-          <!-- Llenar con GET /api/v1/developer/access_policies/schedules -->
-          <option value="">(Selecciona un horario)</option>
-        </select>
-      </label>
-      <label class="md:col-span-4">
-        <span class="text-sm text-gray-700">Grupo de festivos</span>
-        <select id="holidaySelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
-          <!-- Llenar con GET /api/v1/developer/access_policies/holiday_groups -->
-          <option value="">(Ninguno / “No Holidays”)</option>
-        </select>
-      </label>
-      <div class="md:col-span-4 flex items-end gap-2">
-        <button id="btnNewSchedule" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Nuevo horario</button>
-        <button id="btnEditSchedule" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Editar</button>
-        <button id="btnDelSchedule" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50">Eliminar</button>
+<section class="bg-white rounded-2xl border border-gray-200 p-4">
+  <h2 class="text-lg font-semibold text-gray-900 mb-3">Horarios & Festivos</h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+    <label class="md:col-span-4">
+      <span class="text-sm text-gray-700">Horario (Schedule)</span>
+      <select id="scheduleSelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+        <option value="">(Selecciona un horario)</option>
+        <% (horarios || []).forEach(h => { %>
+          <option value="<%= h.id_horario %>">
+            <%= h.nombre_horario %> <%= h.activo ? '' : ' (inactivo)' %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label class="md:col-span-4">
+      <span class="text-sm text-gray-700">Grupo de festivos</span>
+      <select id="holidaySelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+        <option value="">(Ninguno / “No Holidays”)</option>
+        <!-- Llénalo luego si manejas grupos -->
+      </select>
+    </label>
+
+    <div class="md:col-span-4 flex items-end gap-2">
+      <button id="btnNewSchedule" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Nuevo horario</button>
+      <button id="btnDelSchedule" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50" disabled>Eliminar</button>
+    </div>
+  </div>
+
+  <!-- Vista previa del horario seleccionado -->
+  <div id="schedulePreview" class="mt-4 hidden">
+    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-medium text-gray-900">
+          <span id="previewName">—</span>
+          <span id="previewBadge" class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border"></span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+        <% const diasEti = {lun:'Lunes', mar:'Martes', mie:'Miércoles', jue:'Jueves', vie:'Viernes', sab:'Sábado', dom:'Domingo'}; %>
+        <% (horarios || []).forEach(() => {}); %> <!-- no hace nada, sólo para que EJS no queje en algunos motores -->
+        <!-- El contenido real se llena por JS para el horario elegido -->
+        <div id="previewBody" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Editor simple de franjas -->
+  <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+      <div class="text-sm font-medium text-gray-900 mb-2">Semana</div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Lunes</span>
+          <input id="mon" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
+        </label>
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Martes</span>
+          <input id="tue" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
+        </label>
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Miércoles</span>
+          <input id="wed" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
+        </label>
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Jueves</span>
+          <input id="thu" type="text" placeholder="—" class="w-36 text-right focus:outline-none">
+        </label>
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Viernes</span>
+          <input id="fri" type="text" placeholder="09:00-17:00" class="w-36 text-right focus:outline-none">
+        </label>
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Sábado</span>
+          <input id="sat" type="text" placeholder="—" class="w-36 text-right focus:outline-none">
+        </label>
+        <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+          <span>Domingo</span>
+          <input id="sun" type="text" placeholder="—" class="w-36 text-right focus:outline-none">
+        </label>
       </div>
     </div>
 
-    <!-- Editor simple de franjas -->
-    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-        <div class="text-sm font-medium text-gray-900 mb-2">Semana</div>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <!-- Repite para todos los días; demo con L-V -->
-          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
-            <span>Lunes</span>
-            <input id="mon" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
-          </label>
-          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
-            <span>Martes</span>
-            <input id="tue" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
-          </label>
-          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
-            <span>Miércoles</span>
-            <input id="wed" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
-          </label>
-          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
-            <span>Jueves</span>
-            <input id="thu" type="text" placeholder="—" class="w-36 text-right focus:outline-none">
-          </label>
-          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
-            <span>Viernes</span>
-            <input id="fri" type="text" placeholder="09:00-17:00" class="w-36 text-right focus:outline-none">
-          </label>
-        </div>
+    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+      <div class="text-sm font-medium text-gray-900 mb-2">Festivos</div>
+      <div class="flex items-center gap-2">
+        <input id="hol1" type="text" placeholder="10:00-14:00; 16:00-18:00" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none">
+        <button id="btnApplyHoliday" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">Aplicar</button>
       </div>
-      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-        <div class="text-sm font-medium text-gray-900 mb-2">Festivos</div>
-        <div class="flex items-center gap-2">
-          <input id="hol1" type="text" placeholder="10:00-14:00; 16:00-18:00" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none">
-          <button id="btnApplyHoliday" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">Aplicar</button>
-        </div>
-        <p class="text-xs text-gray-500 mt-2">Usa formato HH:mm–HH:mm separado por coma para múltiples franjas.</p>
-      </div>
+      <p class="text-xs text-gray-500 mt-2">Usa formato HH:mm–HH:mm separado por coma para múltiples franjas.</p>
     </div>
-  </section>
+  </div>
+</section>
+<script>
+  
+</script>
+
+<script>
+  // Datos del servidor (inyecta horarios como JSON para uso en JS)
+  window.__HORARIOS__ = <%- JSON.stringify(horarios || []) %>;
+
+  // Helpers para formatear
+  function fmt(h, m) { return h ? h.slice(0,5) : null; } // "HH:MM:SS" -> "HH:MM"
+  function bloque(d) {
+    // Devuelve string tipo "09:00–18:00 (comida 14:00–15:00)" o "Descanso"
+    const e = d.entrada, s = d.salida, ci = d.comida_ini, cf = d.comida_fin;
+    if (!e && !s && !ci && !cf) return 'Descanso';
+    if (e && s) {
+      let base = `${fmt(e)}–${fmt(s)}`;
+      if (ci && cf) base += `  (comida ${fmt(ci)}–${fmt(cf)})`;
+      return base;
+    }
+    // Si hay algo incompleto, lo mostramos parcial
+    return [fmt(e), fmt(s)].filter(Boolean).join('–') || '—';
+  }
+  function mapDia(row, pref) {
+    return {
+      entrada: row[`${pref}_entrada`],
+      comida_ini: row[`${pref}_comida_ini`],
+      comida_fin: row[`${pref}_comida_fin`],
+      salida: row[`${pref}_salida`]
+    };
+  }
+  const etiquetas = { lun:'Lunes', mar:'Martes', mie:'Miércoles', jue:'Jueves', vie:'Viernes', sab:'Sábado', dom:'Domingo' };
+
+  // UI refs
+  const sel = document.getElementById('scheduleSelect');
+  const prev = document.getElementById('schedulePreview');
+  const prevName = document.getElementById('previewName');
+  const prevBadge = document.getElementById('previewBadge');
+  const prevBody = document.getElementById('previewBody');
+  const btnEdit = document.getElementById('btnEditSchedule');
+  const btnDel = document.getElementById('btnDelSchedule');
+
+  // Editor inputs
+  const editorIds = { lun:'mon', mar:'tue', mie:'wed', jue:'thu', vie:'fri', sab:'sat', dom:'sun' };
+
+  function fillPreview(h) {
+    prevName.textContent = h.nombre;
+    prevBadge.textContent = h.activo ? 'Activo' : 'Inactivo';
+    prevBadge.className = 'ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border ' +
+      (h.activo ? 'border-green-200 text-green-700 bg-green-50' : 'border-gray-200 text-gray-600 bg-gray-50');
+
+    prevBody.innerHTML = '';
+    ['lun','mar','mie','jue','vie','sab','dom'].forEach(p => {
+      const d = mapDia(h, p);
+      const item = document.createElement('div');
+      item.className = 'flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2';
+      item.innerHTML = `<span>${etiquetas[p]}</span><span class="font-medium">${bloque(d)}</span>`;
+      prevBody.appendChild(item);
+    });
+    prev.classList.remove('hidden');
+  }
+
+  function fillEditor(h) {
+    // Llena los inputs "09:00-18:00" por día (o "—" si descanso)
+    ['lun','mar','mie','jue','vie','sab','dom'].forEach(p => {
+      const inp = document.getElementById(editorIds[p]);
+      const d = mapDia(h, p);
+      if (!d.entrada && !d.salida) {
+        inp.value = '—';
+        return;
+      }
+      const base = [fmt(d.entrada), fmt(d.salida)].filter(Boolean).join('-');
+      const comida = (d.comida_ini && d.comida_fin) ? `; ${fmt(d.comida_ini)}-${fmt(d.comida_fin)}` : '';
+      inp.value = base + comida;
+    });
+  }
+
+  sel?.addEventListener('change', () => {
+    const id = Number(sel.value);
+    const h = (window.__HORARIOS__ || []).find(x => x.id_horario === id);
+    const enabled = !!h;
+    // btnEdit.disabled = !enabled;
+    // btnDel.disabled = !enabled;
+    if (btnEdit) btnEdit.disabled = !enabled;  // ← protege si no existe
+    if (btnDel)  btnDel.disabled  = !enabled;
+
+    if (h) {
+      fillPreview(h);
+      fillEditor(h);
+    } else {
+      prev.classList.add('hidden');
+    }
+  });
+  
+
+  btnDel?.addEventListener('click', () => {
+  const id = Number(sel?.value);
+  if (!id) return;
+
+  if (!confirm('¿Seguro que deseas eliminar este horario? Esta acción no se puede deshacer.')) {
+    return;
+  }
+
+  fetch(`/horarios-semanales/${id}`, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) {
+        alert(data.msg || 'No se pudo eliminar el horario');
+        return;
+      }
+      alert('Horario eliminado con éxito');
+      location.reload();
+    })
+    .catch(err => {
+      console.error('Error en fetch eliminar:', err);
+      alert('Error de red al eliminar');
+    });
+});
+
+
+  // Si quieres seleccionar el primero automáticamente:
+  // if (window.__HORARIOS__ && window.__HORARIOS__.length) {
+  //   sel.value = String(window.__HORARIOS__[0].id_horario);
+  //   sel.dispatchEvent(new Event('change'));
+  // }
+</script>
+
 
   <!-- Políticas de acceso -->
   <section class="bg-white rounded-2xl border border-gray-200 p-4">
@@ -207,6 +366,413 @@
       </div>
     </div>
   </section>
+
+<!-- ================ Modal: Nuevo horario semanal (con scroll) ================= -->
+<div id="modalHorarioSemanal" class="fixed inset-0 z-[60] hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40" data-ws-overlay></div>
+
+  <!-- Overlay scrollable -->
+  <div class="relative h-full w-full overflow-y-auto">
+    <div class="mx-auto my-8 w-full max-w-5xl">
+      <!-- Card -->
+      <div class="flex max-h-[85vh] flex-col rounded-2xl bg-white shadow-2xl border border-gray-200">
+        <!-- Header fijo -->
+        <div class="sticky top-0 z-10 bg-white p-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Nuevo horario semanal</h3>
+            <button type="button" class="p-2 rounded-lg hover:bg-gray-100" data-ws-close aria-label="Cerrar">✕</button>
+          </div>
+        </div>
+
+        <!-- Body scrollable -->
+        <div class="p-4 overflow-y-auto">
+          <form id="formHorarioSemanal" class="space-y-4">
+            <!-- Nombre + Activo + Utilidad -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+              <label class="md:col-span-6 block">
+                <span class="text-sm text-gray-700">Nombre del horario</span>
+                <input type="text" name="nombre" id="ws_nombre" required maxlength="60"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600"
+                        placeholder="Ej. Turno Matutino RH">
+              </label>
+
+              <div class="md:col-span-3 flex items-end">
+                <label class="inline-flex items-center gap-2 select-none">
+                  <input type="checkbox" name="activo" id="ws_activo" class="rounded border-gray-300" checked>
+                  <span class="text-sm text-gray-700">Activo</span>
+                </label>
+              </div>
+
+              <div class="md:col-span-3 flex items-end justify-end">
+                <button type="button" id="ws_copyMonday"
+                        class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+                  Copiar lunes al resto
+                </button>
+              </div>
+            </div>
+
+            <!-- Días de la semana -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <!-- Lunes -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Lunes</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="lun_entrada" id="lun_entrada"
+                           class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="lun_comida_ini" id="lun_comida_ini"
+                           class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="lun_comida_fin" id="lun_comida_fin"
+                           class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="lun_salida" id="lun_salida"
+                           class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Martes -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Martes</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="mar_entrada" id="mar_entrada" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="mar_comida_ini" id="mar_comida_ini" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="mar_comida_fin" id="mar_comida_fin" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="mar_salida" id="mar_salida" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Miércoles -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Miércoles</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="mie_entrada" id="mie_entrada" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="mie_comida_ini" id="mie_comida_ini" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="mie_comida_fin" id="mie_comida_fin" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="mie_salida" id="mie_salida" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Jueves -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Jueves</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="jue_entrada" id="jue_entrada" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="jue_comida_ini" id="jue_comida_ini" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="jue_comida_fin" id="jue_comida_fin" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="jue_salida" id="jue_salida" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Viernes -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Viernes</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="vie_entrada" id="vie_entrada" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="vie_comida_ini" id="vie_comida_ini" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="vie_comida_fin" id="vie_comida_fin" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="vie_salida" id="vie_salida" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Sábado -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Sábado</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="sab_entrada" id="sab_entrada" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="sab_comida_ini" id="sab_comida_ini" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="sab_comida_fin" id="sab_comida_fin" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="sab_salida" id="sab_salida" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Domingo -->
+              <fieldset class="border border-gray-200 rounded-xl p-3">
+                <legend class="px-2 text-sm font-medium text-gray-800">Domingo</legend>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Entrada</span>
+                    <input type="time" name="dom_entrada" id="dom_entrada" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (inicio)</span>
+                    <input type="time" name="dom_comida_ini" id="dom_comida_ini" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block">
+                    <span class="text-xs text-gray-600">Comida (fin)</span>
+                    <input type="time" name="dom_comida_fin" id="dom_comida_fin" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                  <label class="block col-span-2">
+                    <span class="text-xs text-gray-600">Salida</span>
+                    <input type="time" name="dom_salida" id="dom_salida" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+
+            <p class="text-xs text-gray-500">* Deja vacío un día para marcarlo como descanso. Si capturas comida, llena inicio y fin.</p>
+          </form>
+        </div>
+
+        <!-- Footer fijo -->
+        <div class="sticky bottom-0 z-10 bg-white p-4 border-t border-gray-200 flex items-center justify-end gap-2">
+          <button type="button" class="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50" data-ws-close>Cancelar</button>
+          <button type="submit" form="formHorarioSemanal" id="ws_submit" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ================== /Modal ================== -->
+
+
+  
+<script>
+  function openModal() {
+  document.getElementById('modalHorarioSemanal').classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
+function closeModal() {
+  document.getElementById('modalHorarioSemanal').classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+}
+
+  (function () {
+    const openBtn = document.getElementById('btnNewSchedule'); // tu botón existente
+    const modal = document.getElementById('modalHorarioSemanal');
+    const overlay = modal?.querySelector('[data-ws-overlay]');
+    const closeBtns = modal?.querySelectorAll('[data-ws-close]');
+    const form = document.getElementById('formHorarioSemanal');
+    const submitBtn = document.getElementById('ws_submit');
+    const copyMondayBtn = document.getElementById('ws_copyMonday');
+
+    function openModal() {
+      modal.classList.remove('hidden');
+      setTimeout(() => document.getElementById('ws_nombre')?.focus(), 50);
+      document.addEventListener('keydown', onEsc);
+    }
+    function closeModal() {
+      modal.classList.add('hidden');
+      document.removeEventListener('keydown', onEsc);
+      form.reset();
+    }
+    function onEsc(e) { if (e.key === 'Escape') closeModal(); }
+
+    openBtn?.addEventListener('click', openModal);
+    overlay?.addEventListener('click', closeModal);
+    closeBtns?.forEach(b => b.addEventListener('click', closeModal));
+
+    // Utilidad: copiar lunes al resto
+    copyMondayBtn?.addEventListener('click', () => {
+      const fields = ['entrada', 'comida_ini', 'comida_fin', 'salida'];
+      const lunes = fields.map(f => document.getElementById('lun_' + f)?.value || '');
+      const dias = ['mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
+      dias.forEach(d => fields.forEach((f, i) => {
+        const el = document.getElementById(d + '_' + f);
+        if (el) el.value = lunes[i];
+      }));
+    });
+
+    // Helpers
+    function t2m(t) {
+      if (!t) return null;
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+    function validarBloque(entrada, cIni, cFin, salida, etiquetaDia) {
+      const e = t2m(entrada), ci = t2m(cIni), cf = t2m(cFin), s = t2m(salida);
+      // Si no hay nada, el día se considera descanso y es válido
+      if (entrada === '' && cIni === '' && cFin === '' && salida === '') return true;
+
+      // Reglas mínimas si hay horas
+      if (!entrada || !salida) {
+        alert(`En ${etiquetaDia}: si capturas horario, debes poner entrada y salida.`);
+        return false;
+      }
+      if (s <= e) {
+        alert(`En ${etiquetaDia}: la salida debe ser posterior a la entrada.`);
+        return false;
+      }
+      // Si hay comida, debe estar completa y dentro del turno
+      const algunoComida = (cIni !== '' || cFin !== '');
+      if (algunoComida && (!cIni || !cFin)) {
+        alert(`En ${etiquetaDia}: si capturas comida, debes poner inicio y fin.`);
+        return false;
+      }
+      if (ci != null && (ci <= e || ci >= s)) {
+        alert(`En ${etiquetaDia}: la entrada a comer debe estar dentro del turno.`);
+        return false;
+      }
+      if (cf != null && (cf <= e || cf >= s || (ci != null && cf <= ci))) {
+        alert(`En ${etiquetaDia}: la salida de comer debe ser después del inicio y dentro del turno.`);
+        return false;
+      }
+      return true;
+    }
+
+    form?.addEventListener('input', () => {
+      submitBtn.disabled = !form.checkValidity();
+    });
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Validar por día (solo si hay datos)
+      const dias = [
+        { p: 'lun', n: 'Lunes' },
+        { p: 'mar', n: 'Martes' },
+        { p: 'mie', n: 'Miércoles' },
+        { p: 'jue', n: 'Jueves' },
+        { p: 'vie', n: 'Viernes' },
+        { p: 'sab', n: 'Sábado' },
+        { p: 'dom', n: 'Domingo' },
+      ];
+
+      for (const d of dias) {
+        const eV = form[`${d.p}_entrada`].value;
+        const ciV = form[`${d.p}_comida_ini`].value;
+        const cfV = form[`${d.p}_comida_fin`].value;
+        const sV = form[`${d.p}_salida`].value;
+        if (!validarBloque(eV, ciV, cfV, sV, d.n)) return;
+      }
+
+      // Construir payload con null para vacíos (match columnas MySQL)
+      const payload = {
+        nombre: form.nombre.value.trim(),
+        activo: form.activo.checked ? 1 : 0,
+
+        lun_entrada: form.lun_entrada.value || null,
+        lun_comida_ini: form.lun_comida_ini.value || null,
+        lun_comida_fin: form.lun_comida_fin.value || null,
+        lun_salida: form.lun_salida.value || null,
+
+        mar_entrada: form.mar_entrada.value || null,
+        mar_comida_ini: form.mar_comida_ini.value || null,
+        mar_comida_fin: form.mar_comida_fin.value || null,
+        mar_salida: form.mar_salida.value || null,
+
+        mie_entrada: form.mie_entrada.value || null,
+        mie_comida_ini: form.mie_comida_ini.value || null,
+        mie_comida_fin: form.mie_comida_fin.value || null,
+        mie_salida: form.mie_salida.value || null,
+
+        jue_entrada: form.jue_entrada.value || null,
+        jue_comida_ini: form.jue_comida_ini.value || null,
+        jue_comida_fin: form.jue_comida_fin.value || null,
+        jue_salida: form.jue_salida.value || null,
+
+        vie_entrada: form.vie_entrada.value || null,
+        vie_comida_ini: form.vie_comida_ini.value || null,
+        vie_comida_fin: form.vie_comida_fin.value || null,
+        vie_salida: form.vie_salida.value || null,
+
+        sab_entrada: form.sab_entrada.value || null,
+        sab_comida_ini: form.sab_comida_ini.value || null,
+        sab_comida_fin: form.sab_comida_fin.value || null,
+        sab_salida: form.sab_salida.value || null,
+
+        dom_entrada: form.dom_entrada.value || null,
+        dom_comida_ini: form.dom_comida_ini.value || null,
+        dom_comida_fin: form.dom_comida_fin.value || null,
+        dom_salida: form.dom_salida.value || null,
+      };
+
+      console.log('Nuevo horario semanal (payload listo):', payload);
+
+      // Frontend (dentro del submit del modal)
+      fetch('/horarios-semanales/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) {
+          alert(data.msg || 'No se pudo guardar.');
+          return;
+        }
+        // Éxito: data.id_horario
+        // Aquí recargas, cierras modal, refrescas tabla, etc.
+        // location.reload();
+      })
+      .catch(() => alert('Error de red al guardar.'));
+
+
+      closeModal();
+    });
+  })();
+</script>
+
 
   <!-- Script de integración (solo frontend; reemplaza host/token) -->
   <script>
