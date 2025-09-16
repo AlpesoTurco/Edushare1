@@ -126,16 +126,18 @@
                   </div>
                 </div>
                 <!-- ESTADO -->
-                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                  Activo
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium 
+                  <%= usuario.activo == 1 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' %>">
+                  <%= usuario.activo == 1 ? 'Activo' : 'Inactivo' %>
                 </span>
+
               </div>
 
               <!-- METADATOS -->
               <dl class="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-sm">
                 <div>
                   <dt class="text-gray-500">Rol</dt>
-                  <dd class="text-gray-900 font-medium">Operador</dd>
+                  <dd class="text-gray-900 font-medium"><%= usuario?.nombre_puesto || '---' %></dd>
                 </div>
                 <div>
                   <dt class="text-gray-500">Departamento</dt>
@@ -146,12 +148,12 @@
                   <dd class="text-gray-900">+52 <%= usuario.telefono %></dd>
                 </div>
                 <div>
-                  <dt class="text-gray-500">Último acceso</dt>
-                  <dd class="text-gray-900">2025-08-11 08:30</dd>
+                  <dt class="text-gray-500">Horario</dt>
+                  <dd class="text-gray-900"><%= usuario?.nombre_horario || '---' %></dd>
                 </div>
                 <div>
-                  <dt class="text-gray-500">Horario</dt>
-                  <dd class="text-gray-900">L a V · 9:00–18:00</dd>
+                  <dt class="text-gray-500">Último acceso</dt>
+                  <dd class="text-gray-900">2025-08-11 08:30</dd>
                 </div>
                 <div>
                   <dt class="text-gray-500">Dispositivo habitual</dt>

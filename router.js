@@ -205,7 +205,11 @@ router.get('/perfil/:id_usuario', ...auth, (req, res) => {
 
 // Usuarios (con DB)
 router.get('/usuarios', ...auth, asyncHandler(async (req, res) => {
-  const sql = 'SELECT * FROM usuarios';
+  const sql = `
+  SELECT *
+  FROM usuarios u
+  LEFT JOIN puesto p ON u.id_usuario = p.id_usuariofk
+  LEFT JOIN horarios_semanales h ON p.id_horario = h.id_horario`;
   connections.query(sql, (error, results) => {
     if (error) {
       console.error('Error en consulta:', error);
