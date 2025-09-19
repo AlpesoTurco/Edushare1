@@ -27,11 +27,15 @@ const auth = [requireAuthView];
 
 // Dispositivos, Actividad, Configuración, Nuevo Usuario, Perfil
 renderRoute('/dispositivos', 'dispositivos', auth);
-renderRoute('/actividad', 'actividad', auth);
 renderRoute('/nuevousuario', 'nuevousuario', auth);
+renderRoute('/actividad', 'actividad', auth);
 
 
-// home
+//mi actividad
+renderRoute('/miactividad', 'miactividad', auth);
+
+
+
 // helper
 const q = (sql, params = []) =>
   new Promise((resolve, reject) => {
@@ -40,8 +44,10 @@ const q = (sql, params = []) =>
 
 // home
 router.get('/home', ...auth, async (req, res) => {
+  
   try {
-    const [usuariosActivos, dispositivos, horariosActivos, asistenciasRecientes, kpis, ultimoAcceso] = await Promise.all([
+    
+    const [usuariosActivos, dispositivos, horariosActivos, asistenciasRecientes, kpis, ultimoAcceso, motivos] = await Promise.all([
       q(`
         SELECT id_usuario, CONCAT_WS(' ', nombre, apellido_paterno, apellido_materno) AS nombre_completo
         FROM usuarios
@@ -51,20 +57,14 @@ router.get('/home', ...auth, async (req, res) => {
       q(`SELECT id_dispositivo, nombre_dispositivo, ubicacion FROM dispositivos ORDER BY id_dispositivo`),
       q(`SELECT id_horario, nombre_horario FROM horarios_semanales WHERE activo = 1 ORDER BY nombre_horario`),
       q(`
-        SELECT 
-          a.id_asistencia, a.fecha, a.hora, a.dia_semana, a.observaciones,
-          u.id_usuario,
-          CONCAT_WS(' ', u.nombre, u.apellido_paterno, u.apellido_materno) AS usuario,
-          d.nombre_dispositivo
-        FROM asistencias a
-        INNER JOIN usuarios u     ON u.id_usuario = a.id_usuario
-        LEFT  JOIN dispositivos d ON d.id_dispositivo = a.id_dispositivo
-        ORDER BY a.fecha DESC, a.hora DESC
-        LIMIT 20
+        SELECT * 
+          FROM vw_asistencias_semaforo
+          ORDER BY fecha DESC, hora DESC
+          LIMIT 20;
       `),
       q(`
         SELECT 
-          (SELECT COUNT(*) FROM asistencias WHERE fecha = CURDATE())  AS asistencias_hoy,
+          (SELECT COUNT(*) FROM asistencias INNER JOIN motivos ON id_motivo = motivofk WHERE fecha = CURDATE() AND nombre_motivo = 'Entrada')  AS asistencias_hoy,
           (SELECT COUNT(*) FROM incidencias  WHERE estatus = 'Pendiente') AS incidencias_pendientes,
           (SELECT COUNT(*) FROM permisos    WHERE estatus = 'Pendiente')  AS permisos_pendientes
       `),
@@ -81,6 +81,9 @@ router.get('/home', ...auth, async (req, res) => {
         LEFT  JOIN puesto p         ON p.id_usuariofk = u.id_usuario
         ORDER BY a.fecha DESC, a.hora DESC
         LIMIT 1
+      `),
+      q(`
+        SELECT * FROM motivos
       `)
     ]);
 
@@ -90,7 +93,8 @@ router.get('/home', ...auth, async (req, res) => {
       horariosActivos,
       asistenciasRecientes,
       kpis: kpis?.[0] || {},
-      ultimoAcceso: ultimoAcceso?.[0] || null
+      ultimoAcceso: ultimoAcceso?.[0] || null,
+      motivos
     });
   } catch (error) {
     console.error('Error en /home:', error);

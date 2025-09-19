@@ -8,50 +8,76 @@ const bcrypt = require('bcryptjs');
 controller.use('/', require('./login_controller'));
 
 controller.post('/acceso/abrir', (req, res) => {
-  const { id_usuario, motivo } = req.body;
-  if (!id_usuario || !motivo) {
-    return res.status(400).json({ ok: false, msg: 'Faltan datos' });
+  let { id_usuario, motivofk, observaciones } = req.body;
+
+  // Validaciones básicas
+  id_usuario = parseInt(id_usuario, 10);
+  motivofk = parseInt(motivofk, 10);
+  observaciones = (observaciones || '').toString().trim();
+
+  if (!id_usuario || !motivofk || !observaciones) {
+    return res.status(400).json({ ok: false, msg: 'Faltan datos: usuario, motivo u observaciones' });
+  }
+  if (observaciones.length > 200) {
+    return res.status(400).json({ ok: false, msg: 'Observaciones supera 200 caracteres' });
   }
 
   // Fecha y hora en CDMX
   const nowCdmx = new Date(
     new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' })
   );
-
-  const pad = (n) => String(n).padStart(2, '0');
+  const pad = n => String(n).padStart(2, '0');
   const fecha = `${nowCdmx.getFullYear()}-${pad(nowCdmx.getMonth() + 1)}-${pad(nowCdmx.getDate())}`;
-  const hora = `${pad(nowCdmx.getHours())}:${pad(nowCdmx.getMinutes())}:${pad(nowCdmx.getSeconds())}`;
-
-  // Día de la semana en español
+  const hora  = `${pad(nowCdmx.getHours())}:${pad(nowCdmx.getMinutes())}:${pad(nowCdmx.getSeconds())}`;
   const dia_semana = nowCdmx
     .toLocaleDateString('es-MX', { weekday: 'long', timeZone: 'America/Mexico_City' })
     .toLowerCase();
 
-  // Insert en asistencias
-  const sqlAsistencia = `
-    INSERT INTO asistencias
-      (id_usuario, id_dispositivo, fecha, hora, dia_semana, registro_manual, observaciones)
-    VALUES
-      (?, 1, ?, ?, ?, 1, ?)
-  `;
-
-  connections.query(sqlAsistencia, [id_usuario, fecha, hora, dia_semana, motivo], (err, result) => {
-    if (err) {
-      console.error('Error al insertar asistencia:', err);
-      return res.status(500).json({ ok: false, msg: 'Error al registrar asistencia' });
+  // (Opcional) comprobar que el motivo existe para dar error 400 legible
+  const sqlCheckMotivo = 'SELECT id_motivo FROM motivos WHERE id_motivo = ? LIMIT 1';
+  connections.query(sqlCheckMotivo, [motivofk], (errCk, rowsCk) => {
+    if (errCk) {
+      console.error('Error verificando motivo:', errCk);
+      return res.status(500).json({ ok: false, msg: 'Error verificando motivo' });
+    }
+    if (!rowsCk?.length) {
+      return res.status(400).json({ ok: false, msg: 'Motivo no válido' });
     }
 
-    const at = new Date().toISOString();
-    return res.json({
-      ok: true,
-      at,
-      asistencia_id: result.insertId,
-      fecha,
-      hora,
-      dia_semana,
+    // Insert en asistencias (id_dispositivo fijo = 1; ajusta si necesitas)
+    const sqlAsistencia = `
+      INSERT INTO asistencias
+        (id_usuario, id_dispositivo, fecha, hora, dia_semana, registro_manual, motivofk, observaciones)
+      VALUES
+        (?, 1, ?, ?, ?, 1, ?, ?)
+    `;
+    const params = [id_usuario, fecha, hora, dia_semana, motivofk, observaciones];
+
+    connections.query(sqlAsistencia, params, (errIns, result) => {
+      if (errIns) {
+        // ER_NO_REFERENCED_ROW_2 (1452) si la FK no existe
+        if (errIns.errno === 1452) {
+          return res.status(400).json({ ok: false, msg: 'Motivo no válido (FK)' });
+        }
+        console.error('Error al insertar asistencia:', errIns);
+        return res.status(500).json({ ok: false, msg: 'Error al registrar asistencia' });
+      }
+
+      const at = new Date().toISOString();
+      return res.json({
+        ok: true,
+        at,
+        asistencia_id: result.insertId,
+        fecha,
+        hora,
+        dia_semana,
+        id_usuario,
+        motivofk,
+      });
     });
   });
 });
+
 
 
 

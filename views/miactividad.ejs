@@ -1,0 +1,572 @@
+<%- include ('Plantilla/Inicio') %>
+    <!-- === ACTIVIDAD: KPIs + Filtros + Timeline + Tabla + Modal === -->
+<section id="actividad" class="space-y-6">
+
+  <!-- Encabezado y acciones -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h2 class="text-xl md:text-2xl font-semibold text-gray-900">Actividad reciente</h2>
+      <p class="text-sm text-gray-500">Eventos de acceso, aperturas manuales e incidencias del sistema.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnExport" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Exportar CSV</button>
+      <button id="btnRefresh" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Actualizar</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Permisos Restantes</div>
+      <div id="kpiTotal" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Puntualidad</div>
+      <div id="kpiOk" class="mt-1 text-2xl font-semibold text-gray-900">10</div>
+      <div id="kpiOkDelta" class="text-xs text-green-600 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Retardos (en la semana)</div>
+      <div id="kpiFail" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <div id="kpiFailTop" class="text-xs text-gray-500 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Aperturas manuales</div>
+      <div id="kpiManual" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Prom. tiempo verificación</div>
+      <div id="kpiLatency" class="mt-1 text-2xl font-semibold text-gray-900">—</div>
+      <!-- rellena con ms o s si lo manejas -->
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white rounded-2xl border border-gray-200 p-4">
+    <form id="filters" class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-4">
+        <span class="sr-only">Buscar</span>
+        <input id="fQ" type="text" placeholder="Buscar: nombre, correo, ID, motivo…"
+               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Rango</span>
+        <select id="fRange" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="hoy">Hoy</option>
+          <option value="24h">Últimas 24h</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Evento</span>
+        <select id="fTipo" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Evento (todos)</option>
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          <option value="manual">Apertura manual</option>
+          <option value="denegado">Acceso denegado</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Estado</span>
+        <select id="fEstado" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Estado (todos)</option>
+          <option value="ok">Correcto</option>
+          <option value="fail">Denegado</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Dispositivo</span>
+        <select id="fDevice" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Dispositivo (todos)</option>
+          <option value="T-01">Torniquete 1</option>
+          <option value="T-02">Torniquete 2</option>
+          <option value="PU-01">Puerta principal</option>
+          <!-- llena dinámicamente -->
+        </select>
+      </label>
+      <div class="md:col-span-12 flex items-center gap-2">
+        <button id="btnFilter" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Aplicar</button>
+        <button id="btnClear" type="button" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Limpiar</button>
+      </div>
+    </form>
+  </div>
+
+ <!-- FAB: Acciones rápidas -->
+<div class="fixed bottom-6 right-6 z-50">
+  <div id="fabMenu" class="hidden mb-2 space-y-2">
+    <button id="btnIncidenciaOpen"
+      class="w-full px-4 py-2 rounded-xl bg-white border border-gray-200 shadow hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
+      <span>⚠️</span> Reportar incidencia
+    </button>
+    <button id="btnPermisoOpen"
+      class="w-full px-4 py-2 rounded-xl bg-white border border-gray-200 shadow hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
+      <span>🗓️</span> Solicitar permiso
+    </button>
+  </div>
+  <button id="fabToggle"
+    class="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 text-2xl grid place-items-center">
+    ＋
+  </button>
+</div>
+
+<!-- Bandeja: Permisos e Incidencias -->
+<div class="bg-white rounded-2xl border border-gray-200 p-4">
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="text-lg font-semibold text-gray-900">Bandeja de solicitudes</h3>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Permisos <span id="badgePermisos" class="font-semibold">0</span></span>
+      <span class="px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Incidencias <span id="badgeIncidencias" class="font-semibold">0</span></span>
+    </div>
+  </div>
+
+  <!-- Filtros rápidos -->
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    <button data-filter="all" class="tagFilter px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm bg-gray-50">Todo</button>
+    <button data-filter="permiso" class="tagFilter px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Permisos</button>
+    <button data-filter="incidencia" class="tagFilter px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Incidencias</button>
+    <span class="ml-auto text-xs text-gray-500">Arrastra archivos a los formularios para adjuntarlos</span>
+  </div>
+
+  <div class="overflow-auto max-h-[420px]">
+    <table class="min-w-full text-sm">
+      <thead class="sticky top-0 bg-gray-50 text-gray-600 border-b border-gray-200">
+        <tr>
+          <th class="px-4 py-2 text-left">Tipo</th>
+          <th class="px-4 py-2 text-left">Empleado</th>
+          <th class="px-4 py-2 text-left">Motivo</th>
+          <th class="px-4 py-2 text-left">Rango / Fecha</th>
+          <th class="px-4 py-2 text-left">Adjuntos</th>
+          <th class="px-4 py-2 text-left">Estatus</th>
+          <th class="px-4 py-2 text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="inboxBody" class="divide-y divide-gray-100 text-gray-700">
+        <!-- Render JS -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- Modal: Solicitar Permiso -->
+<dialog id="dlgPermiso" class="rounded-2xl backdrop:bg-black/40 w-full max-w-2xl p-0">
+  <div class="bg-white rounded-2xl overflow-hidden">
+    <header class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h4 class="text-lg font-semibold text-gray-900">Solicitar permiso</h4>
+      <button class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" data-close="dlgPermiso">✕</button>
+    </header>
+
+    <form id="formPermiso" class="p-5 space-y-4" novalidate>
+      <!-- Tipo de permiso -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm text-gray-700">Tipo de permiso</span>
+          <select name="tipo" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <option value="">Selecciona…</option>
+            <option value="personal">Personal</option>
+            <option value="médico">Médico</option>
+            <option value="estudios">Estudios</option>
+            <option value="luto">Luto</option>
+            <option value="otro">Otro</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-sm text-gray-700">Modalidad</span>
+          <select name="modalidad" id="permModalidad" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <option value="">Selecciona…</option>
+            <option value="dia-completo">Día completo</option>
+            <option value="por-horas">Por horas</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Rango / horas -->
+      <div id="permFechas" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm text-gray-700">Fecha inicio</span>
+          <input name="inicio" type="date" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Fecha fin</span>
+          <input name="fin" type="date" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+      </div>
+
+      <div id="permHoras" class="grid grid-cols-1 md:grid-cols-2 gap-3 hidden">
+        <label class="block">
+          <span class="text-sm text-gray-700">Hora inicio</span>
+          <input name="hInicio" type="time"
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Hora fin</span>
+          <input name="hFin" type="time"
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+      </div>
+
+      <!-- Con goce / sin goce -->
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="goce" value="con-goce" class="rounded" checked>
+          Con goce de sueldo
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="goce" value="sin-goce" class="rounded">
+          Sin goce de sueldo
+        </label>
+      </div>
+
+      <!-- Motivo -->
+      <div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-700">Motivo (máx. 300)</span>
+          <span id="permCount" class="text-xs text-gray-500">0/300</span>
+        </div>
+        <textarea name="motivo" rows="3" maxlength="300" required
+          class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+          placeholder="Describe el motivo de tu permiso…"></textarea>
+      </div>
+
+      <!-- Adjuntos -->
+      <div id="permDrop"
+           class="border-2 border-dashed border-gray-300 rounded-xl p-3 text-sm text-gray-600 hover:border-blue-400 transition">
+        <p><strong>Adjuntos (opcional):</strong> arrastra archivos o <label class="text-blue-600 underline cursor-pointer">explora<input id="permFiles" type="file" class="sr-only" multiple></label></p>
+        <div id="permPreview" class="mt-2 flex flex-wrap gap-2"></div>
+      </div>
+
+      <footer class="pt-4 border-t border-gray-200 flex items-center justify-end gap-2">
+        <button type="button" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50" data-close="dlgPermiso">Cancelar</button>
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Enviar solicitud</button>
+      </footer>
+    </form>
+  </div>
+</dialog>
+
+<!-- Modal: Reportar Incidencia -->
+<dialog id="dlgIncidencia" class="rounded-2xl backdrop:bg-black/40 w-full max-w-2xl p-0">
+  <div class="bg-white rounded-2xl overflow-hidden">
+    <header class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h4 class="text-lg font-semibold text-gray-900">Reportar incidencia</h4>
+      <button class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" data-close="dlgIncidencia">✕</button>
+    </header>
+
+    <form id="formIncidencia" class="p-5 space-y-4" novalidate>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm text-gray-700">Categoría</span>
+          <select name="categoria" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <option value="">Selecciona…</option>
+            <option value="médica">Médica</option>
+            <option value="transporte">Transporte</option>
+            <option value="familiar">Familiar</option>
+            <option value="fuerza-mayor">Fuerza mayor</option>
+            <option value="otra">Otra</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Fecha de la incidencia</span>
+          <input name="fecha" type="datetime-local" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-700">Descripción (máx. 300)</span>
+          <span id="incCount" class="text-xs text-gray-500">0/300</span>
+        </div>
+        <textarea name="descripcion" rows="3" maxlength="300" required
+          class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+          placeholder="Cuéntanos qué pasó…"></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm text-gray-700">¿Afectó tu asistencia?</span>
+          <select name="impacto" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <option value="">Selecciona…</option>
+            <option value="falta">Falta</option>
+            <option value="retardo">Retardo</option>
+            <option value="salida-anticipada">Salida anticipada</option>
+            <option value="sin-impacto">Sin impacto</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Ubicación (opcional)</span>
+          <input name="ubicacion" type="text" placeholder="Ej. Clínica IMSS 21"
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+      </div>
+
+      <!-- Adjuntos -->
+      <div id="incDrop"
+           class="border-2 border-dashed border-gray-300 rounded-xl p-3 text-sm text-gray-600 hover:border-blue-400 transition">
+        <p><strong>Adjuntos (opcional):</strong> receta, incapacidad, foto, etc. Arrastra o <label class="text-blue-600 underline cursor-pointer">explora<input id="incFiles" type="file" class="sr-only" multiple></label></p>
+        <div id="incPreview" class="mt-2 flex flex-wrap gap-2"></div>
+      </div>
+
+      <footer class="pt-4 border-t border-gray-200 flex items-center justify-end gap-2">
+        <button type="button" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50" data-close="dlgIncidencia">Cancelar</button>
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Enviar reporte</button>
+      </footer>
+    </form>
+  </div>
+</dialog>
+
+
+<script>
+// ====== Estado inicial demo ======
+let PERMISOS_RESTANTES = 5; // <-- actualízalo con tu backend
+const bandeja = []; // { id, kind:'permiso'|'incidencia', empleado, motivo/desc, rango/fecha, adjuntos[], estatus:'En revisión'|'Aprobado'|'Rechazado' }
+
+// Refrescar KPI de permisos restantes (si existe en tu header)
+function syncPermisosRestantes() {
+  const el = document.querySelector('#kpiTotal');
+  if (el) el.textContent = PERMISOS_RESTANTES;
+}
+syncPermisosRestantes();
+
+// ====== Helpers UI ======
+const toast = (msg) => {
+  const t = document.createElement('div');
+  t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-xl bg-gray-900 text-white text-sm shadow-lg';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=> t.remove(), 2200);
+};
+
+const badge = (status) => {
+  const map = {
+    'En revisión': 'bg-amber-50 text-amber-700 border border-amber-200',
+    'Aprobado': 'bg-green-50 text-green-700 border border-green-200',
+    'Rechazado': 'bg-red-50 text-red-700 border-red-200 border'
+  };
+  return `<span class="px-2.5 py-1 rounded-full text-xs font-medium ${map[status]||'bg-gray-100 text-gray-700 border'}">${status}</span>`;
+};
+
+// ====== FAB ======
+const fabToggle = document.getElementById('fabToggle');
+const fabMenu = document.getElementById('fabMenu');
+fabToggle?.addEventListener('click', () => {
+  fabMenu.classList.toggle('hidden');
+  fabToggle.textContent = fabMenu.classList.contains('hidden') ? '＋' : '✕';
+});
+document.getElementById('btnPermisoOpen')?.addEventListener('click', () => { document.getElementById('dlgPermiso').showModal(); fabMenu.classList.add('hidden'); fabToggle.textContent = '＋'; });
+document.getElementById('btnIncidenciaOpen')?.addEventListener('click', () => { document.getElementById('dlgIncidencia').showModal(); fabMenu.classList.add('hidden'); fabToggle.textContent = '＋'; });
+
+// ====== Cerrar modales por data-close ======
+document.querySelectorAll('[data-close]').forEach(btn=>{
+  btn.addEventListener('click', ()=> document.getElementById(btn.dataset.close).close());
+});
+
+// ====== Permiso: cambiar modalidad (días vs horas) ======
+const permModalidad = document.getElementById('permModalidad');
+const permFechas = document.getElementById('permFechas');
+const permHoras = document.getElementById('permHoras');
+permModalidad?.addEventListener('change', ()=>{
+  const byHours = permModalidad.value === 'por-horas';
+  permHoras.classList.toggle('hidden', !byHours);
+  // en horas, solo una fecha (inicio) basta visualmente; puedes forzar fin = inicio al enviar
+});
+
+// ====== Contadores de texto ======
+const bindCounter = (formSel, taSel, counterSel) => {
+  const form = document.querySelector(formSel);
+  if (!form) return;
+  const ta = form.querySelector(taSel);
+  const counter = document.querySelector(counterSel);
+  ta?.addEventListener('input', ()=>{
+    counter.textContent = `${ta.value.length}/${ta.maxLength||300}`;
+  });
+};
+bindCounter('#formPermiso', 'textarea[name="motivo"]', '#permCount');
+bindCounter('#formIncidencia', 'textarea[name="descripcion"]', '#incCount');
+
+// ====== DnD/Adjuntos ======
+function setupDrop(dropId, inputId, previewId) {
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if (!drop || !input || !preview) return;
+
+  const renderFiles = (files) => {
+    preview.innerHTML = '';
+    [...files].forEach(f=>{
+      const tag = document.createElement('div');
+      tag.className = 'px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-xs';
+      tag.textContent = `${f.name} • ${Math.ceil((f.size||0)/1024)} KB`;
+      preview.appendChild(tag);
+    });
+  };
+
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('border-blue-400'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('border-blue-400'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('border-blue-400');
+    input.files = e.dataTransfer.files;
+    renderFiles(input.files);
+  });
+  input.addEventListener('change', ()=> renderFiles(input.files));
+}
+setupDrop('permDrop','permFiles','permPreview');
+setupDrop('incDrop','incFiles','incPreview');
+
+// ====== Render bandeja ======
+const inboxBody = document.getElementById('inboxBody');
+function renderBandeja(filter='all') {
+  if (!inboxBody) return;
+  inboxBody.innerHTML = '';
+  const rows = bandeja.filter(i => filter==='all' ? true : i.kind===filter);
+  document.getElementById('badgePermisos').textContent = bandeja.filter(i=>i.kind==='permiso').length;
+  document.getElementById('badgeIncidencias').textContent = bandeja.filter(i=>i.kind==='incidencia').length;
+
+  rows.slice().reverse().forEach(item => {
+    const tr = document.createElement('tr');
+    const adj = (item.adjuntos||[]).length ? `${item.adjuntos.length} archivo(s)` : '—';
+    tr.innerHTML = `
+      <td class="px-4 py-2 capitalize">${item.kind}</td>
+      <td class="px-4 py-2">${item.empleado||'—'}</td>
+      <td class="px-4 py-2">${item.motivo||item.descripcion||'—'}</td>
+      <td class="px-4 py-2">${item.rango||item.fecha||'—'}</td>
+      <td class="px-4 py-2">${adj}</td>
+      <td class="px-4 py-2">${badge(item.estatus||'En revisión')}</td>
+      <td class="px-4 py-2 text-right">
+        <button class="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50" data-id="${item.id}" data-act="ver">Ver</button>
+      </td>`;
+    inboxBody.appendChild(tr);
+  });
+
+  // acción Ver => abre detalle genérico reutilizando tu modal actual de detalle
+  inboxBody.querySelectorAll('[data-act="ver"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const it = bandeja.find(x=>x.id===btn.dataset.id);
+      if (!it) return;
+      // Mapeo básico al modal existente de detalle:
+      document.getElementById('dEmpleado').textContent = it.empleado || '—';
+      document.getElementById('dPuesto').textContent = it.kind==='permiso' ? 'Permiso' : 'Incidencia';
+      document.getElementById('dEvento').textContent = it.kind;
+      document.getElementById('dEstado').textContent = it.estatus || 'En revisión';
+      document.getElementById('dMotivo').textContent = it.motivo || it.descripcion || '—';
+      document.getElementById('dFecha').textContent  = it.rango || it.fecha || '—';
+      document.getElementById('dDevice').textContent = '—';
+      document.getElementById('dMetodo').textContent = '—';
+      document.getElementById('dUbicacion').textContent = it.ubicacion || '—';
+      document.getElementById('dAudit').textContent = it.id;
+      document.getElementById('dlg').showModal();
+    });
+  });
+}
+renderBandeja();
+
+// Filtros de bandeja
+document.querySelectorAll('.tagFilter').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.tagFilter').forEach(x=>x.classList.remove('bg-gray-50'));
+    b.classList.add('bg-gray-50');
+    renderBandeja(b.dataset.filter);
+  });
+});
+
+// ====== Envío: Permiso ======
+document.getElementById('formPermiso')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const f = e.currentTarget;
+  const fd = new FormData(f);
+  const tipo = fd.get('tipo');
+  const modalidad = fd.get('modalidad');
+  const inicio = fd.get('inicio');
+  const fin = fd.get('fin');
+  const hInicio = fd.get('hInicio');
+  const hFin = fd.get('hFin');
+  const goce = fd.get('goce');
+  const motivo = (fd.get('motivo')||'').trim();
+
+  // Validación mínima
+  if (!tipo || !modalidad || !inicio || (!fin && modalidad==='dia-completo') || !motivo) {
+    toast('Revisa los campos requeridos'); return;
+  }
+  if (modalidad==='por-horas' && (!hInicio || !hFin)) {
+    toast('Indica las horas del permiso'); return;
+  }
+
+  const files = document.getElementById('permFiles').files;
+  const adjuntos = [...files].map(f => ({ name: f.name, size: f.size }));
+
+  const id = `PERM-${Date.now()}`;
+  const rango = modalidad==='dia-completo'
+      ? `${inicio} — ${fin||inicio}`
+      : `${inicio} ${hInicio}–${hFin}`;
+
+  // Simulación frontend: actualizar bandeja y KPIs
+  bandeja.push({
+    id, kind:'permiso', empleado:'(Tú)', motivo, rango, adjuntos,
+    estatus:'En revisión', goce, tipo, modalidad
+  });
+  renderBandeja();
+  // opcional: reduce permisos restantes si aplica tu política:
+  PERMISOS_RESTANTES = Math.max(0, PERMISOS_RESTANTES - 1);
+  syncPermisosRestantes();
+
+  // Backend real (ejemplo):
+  /*
+  const res = await fetch('/permisos', { method:'POST', body: fd });
+  const json = await res.json();
+  */
+
+  document.getElementById('dlgPermiso').close();
+  f.reset();
+  document.getElementById('permPreview').innerHTML = '';
+  toast('Solicitud de permiso enviada');
+});
+
+// ====== Envío: Incidencia ======
+document.getElementById('formIncidencia')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const f = e.currentTarget;
+  const fd = new FormData(f);
+  const categoria = fd.get('categoria');
+  const fecha = fd.get('fecha');
+  const descripcion = (fd.get('descripcion')||'').trim();
+  const impacto = fd.get('impacto');
+  const ubicacion = fd.get('ubicacion');
+
+  if (!categoria || !fecha || !descripcion || !impacto) {
+    toast('Revisa los campos requeridos'); return;
+  }
+  const files = document.getElementById('incFiles').files;
+  const adjuntos = [...files].map(f => ({ name: f.name, size: f.size }));
+
+  const id = `INCI-${Date.now()}`;
+
+  bandeja.push({
+    id, kind:'incidencia', empleado:'(Tú)', descripcion, fecha, adjuntos, ubicacion, impacto,
+    estatus:'En revisión', categoria
+  });
+  renderBandeja();
+
+  // Backend real (ejemplo):
+  /*
+  const res = await fetch('/incidencias', { method:'POST', body: fd });
+  const json = await res.json();
+  */
+
+  document.getElementById('dlgIncidencia').close();
+  f.reset();
+  document.getElementById('incPreview').innerHTML = '';
+  toast('Incidencia reportada');
+});
+</script>
+
+
+
+<%- include ('Plantilla/Final') %>
