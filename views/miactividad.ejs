@@ -262,60 +262,96 @@
       <button class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" data-close="dlgIncidencia">✕</button>
     </header>
 
-    <form id="formIncidencia" class="p-5 space-y-4" novalidate>
+    <form id="formIncidencia" class="p-5 space-y-4" novalidate enctype="multipart/form-data">
+      <!-- Id del usuario -->
+      <input type="hidden" name="id_usuario" value="<%= user.id_usuario %>">
+
+      <!-- Tipo de incidencia / Modalidad -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label class="block">
-          <span class="text-sm text-gray-700">Categoría</span>
-          <select name="categoria" required
+          <span class="text-sm text-gray-700">Tipo de incidencia</span>
+          <select name="tipo" required
             class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
             <option value="">Selecciona…</option>
-            <option value="médica">Médica</option>
-            <option value="transporte">Transporte</option>
-            <option value="familiar">Familiar</option>
-            <option value="fuerza-mayor">Fuerza mayor</option>
-            <option value="otra">Otra</option>
+            <option value="retardo">Retardo</option>
+            <option value="falta">Falta</option>
+            <option value="salida_anticipada">Salida anticipada</option>
+            <option value="sin_registro">Sin registro</option>
+            <option value="otro">Otro</option>
           </select>
         </label>
+
         <label class="block">
-          <span class="text-sm text-gray-700">Fecha de la incidencia</span>
-          <input name="fecha" type="datetime-local" required
+          <span class="text-sm text-gray-700">Modalidad</span>
+          <select name="modalidad" id="incModalidad" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+            <option value="">Selecciona…</option>
+            <option value="por-dias">Por días</option>
+            <option value="por-horas">Por horas</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Rango de fechas -->
+      <div id="incFechas" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm text-gray-700">Fecha inicio</span>
+          <input name="inicio" type="date" required
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Fecha fin</span>
+          <input name="fin" type="date" required
             class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
         </label>
       </div>
 
+      <!-- Horas (solo si por-horas) -->
+      <div id="incHoras" class="grid grid-cols-1 md:grid-cols-2 gap-3 hidden">
+        <label class="block">
+          <span class="text-sm text-gray-700">Hora inicio</span>
+          <input name="hInicio" type="time"
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Hora fin</span>
+          <input name="hFin" type="time"
+            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        </label>
+      </div>
+
+      <!-- (Opcional) Goce de sueldo, para mantener paridad visual con Permisos -->
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="goce" value="con-goce" class="rounded" checked>
+          Con goce de sueldo
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="radio" name="goce" value="sin-goce" class="rounded">
+          Sin goce de sueldo
+        </label>
+      </div>
+
+      <!-- Motivo -->
       <div>
         <div class="flex items-center justify-between">
-          <span class="text-sm text-gray-700">Descripción (máx. 300)</span>
+          <span class="text-sm text-gray-700">Motivo (máx. 300)</span>
           <span id="incCount" class="text-xs text-gray-500">0/300</span>
         </div>
-        <textarea name="descripcion" rows="3" maxlength="300" required
+        <textarea name="motivo" rows="3" maxlength="300" required
           class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-          placeholder="Cuéntanos qué pasó…"></textarea>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label class="block">
-          <span class="text-sm text-gray-700">¿Afectó tu asistencia?</span>
-          <select name="impacto" required
-            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-            <option value="">Selecciona…</option>
-            <option value="falta">Falta</option>
-            <option value="retardo">Retardo</option>
-            <option value="salida-anticipada">Salida anticipada</option>
-            <option value="sin-impacto">Sin impacto</option>
-          </select>
-        </label>
-        <label class="block">
-          <span class="text-sm text-gray-700">Ubicación (opcional)</span>
-          <input name="ubicacion" type="text" placeholder="Ej. Clínica IMSS 21"
-            class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-        </label>
+          placeholder="Describe el motivo de tu incidencia…"></textarea>
       </div>
 
       <!-- Adjuntos -->
       <div id="incDrop"
            class="border-2 border-dashed border-gray-300 rounded-xl p-3 text-sm text-gray-600 hover:border-blue-400 transition">
-        <p><strong>Adjuntos (opcional):</strong> receta, incapacidad, foto, etc. Arrastra o <label class="text-blue-600 underline cursor-pointer">explora<input id="incFiles" type="file" class="sr-only" multiple></label></p>
+        <p><strong>Adjuntos (opcional):</strong> arrastra archivos o
+          <label class="text-blue-600 underline cursor-pointer">
+            explora
+            <input id="incFiles" name="files" type="file" class="sr-only" multiple>
+          </label>
+        </p>
         <div id="incPreview" class="mt-2 flex flex-wrap gap-2"></div>
       </div>
 
@@ -328,9 +364,138 @@
 </dialog>
 
 <script>
+// Datos inyectados desde server
+const INBOX = <%- JSON.stringify(inbox || []) %>;
+const BADGE_PERMISOS = <%= badgePermisos || 0 %>;
+const BADGE_INCIDENCIAS = <%= badgeIncidencias || 0 %>;
+
+// Filtros actuales (útil si quieres reflejar en inputs de fecha o búsqueda)
+const FILTERS = <%- JSON.stringify(filters || {}) %>;
+
+// Mapeo para mostrar iconito o label por kind
+function kindPill(kind) {
+  if (kind === 'permiso') {
+    return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">📝 Permiso</span>';
+  }
+  return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">⚠️ Incidencia</span>';
+}
+
+// Clase de estatus ya viene calculada desde servidor como r.estatusClass
+function estatusBadge(row) {
+  return `<span class="px-2.5 py-1 rounded-full text-xs font-medium ${row.estatusClass}">${row.estatus}</span>`;
+}
+
+// Adjuntos: muestra conteo y, si quieres, una lista desplegable simple
+function adjuntosCell(row) {
+  const n = row.adjuntos?.length || 0;
+  if (!n) return '<span class="text-gray-400">—</span>';
+  const links = row.adjuntos.map(a => {
+    const nombre = a?.nombre || 'archivo';
+    const ruta = a?.ruta || '#';
+    return `<li><a class="underline hover:no-underline" href="/${ruta}" target="_blank" rel="noopener">${nombre}</a></li>`;
+  }).join('');
+  return `
+    <div class="relative group">
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-50 text-gray-700 border border-gray-200">${n} archivo(s)</span>
+      <div class="hidden group-hover:block absolute left-0 mt-1 z-10 bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[220px]">
+        <ul class="space-y-1 text-sm">${links}</ul>
+      </div>
+    </div>
+  `;
+}
+
+// Render principal
+function renderInbox(rows) {
+  const tbody = document.getElementById('inboxBody');
+  if (!tbody) return;
+  if (!rows || !rows.length) {
+    tbody.innerHTML = `
+      <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No hay resultados</td></tr>
+    `;
+    return;
+  }
+  const html = rows.map(r => `
+    <tr data-kind="${r.kind}">
+      <td class="px-4 py-2 align-top">${kindPill(r.kind)}</td>
+      <td class="px-4 py-2 align-top">
+        <div class="font-medium text-gray-900">${r.empleado || '—'}</div>
+        <div class="text-xs text-gray-500">ID: ${r.id_usuario}</div>
+      </td>
+      <td class="px-4 py-2 align-top">
+        <div class="text-gray-900">${r.motivo || '—'}</div>
+        <div class="text-xs text-gray-500">${r.tipo || ''}${r.modalidad ? ' · ' + r.modalidad : ''}</div>
+      </td>
+      <td class="px-4 py-2 align-top">
+        <div class="text-gray-900">${r.rango_fechas || r.fecha_principal || '—'}</div>
+        <div class="text-xs text-gray-500">Creado: ${r.creado_en ? new Date(r.creado_en).toLocaleString('es-MX') : '—'}</div>
+      </td>
+      <td class="px-4 py-2 align-top">${adjuntosCell(r)}</td>
+      <td class="px-4 py-2 align-top">${estatusBadge(r)}</td>
+      <td class="px-4 py-2 align-top text-right">
+        <div class="inline-flex gap-2">
+          <a href="${r.ruta}" class="px-2 py-1 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Ver</a>
+          ${r.estatus === 'Pendiente' ? `
+            <button class="px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700" data-approve="${r.kind}:${r.id}">Aprobar</button>
+            <button class="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700" data-reject="${r.kind}:${r.id}">Rechazar</button>
+          ` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  tbody.innerHTML = html;
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  // badges
+  document.getElementById('badgePermisos')?.replaceChildren(document.createTextNode(BADGE_PERMISOS));
+  document.getElementById('badgeIncidencias')?.replaceChildren(document.createTextNode(BADGE_INCIDENCIAS));
+
+  // render inicial
+  renderInbox(INBOX);
+
+  // filtros rápidos (cliente): mostrar/ocultar según data-kind
+  const buttons = document.querySelectorAll('.tagFilter');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter; // 'all' | 'permiso' | 'incidencia'
+      document.querySelectorAll('#inboxBody tr').forEach(tr => {
+        const kind = tr.getAttribute('data-kind');
+        tr.style.display = (filter === 'all' || kind === filter) ? '' : 'none';
+      });
+      buttons.forEach(b => b.classList.remove('bg-gray-50'));
+      btn.classList.add('bg-gray-50');
+    });
+  });
+});
+
+
+//paro aprobar o rechazar
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest('[data-approve]');
+  const r = e.target.closest('[data-reject]');
+  if (a || r) {
+    const [kind, id] = (a?.dataset.approve || r?.dataset.reject).split(':');
+    const action = a ? 'aprobar' : 'rechazar';
+    try {
+      const resp = await fetch(`/api/${action}/${kind}/${id}`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Error en la acción');
+      // refresca (o manipula en cliente el estatus)
+      location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo completar la acción');
+    }
+  }
+});
+
+</script>
+
+
+<script>
   // ====== Estado inicial demo ======
-  let PERMISOS_RESTANTES = 5; // <-- actualízalo con tu backend
-  const bandeja = []; // { id, kind:'permiso'|'incidencia', empleado, motivo/desc, rango/fecha, adjuntos[], estatus:'En revisión'|'Aprobado'|'Rechazado' }
+  let PERMISOS_RESTANTES = 5; 
+  const bandeja = [];
 
   // Refrescar KPI de permisos restantes (si existe en tu header)
   function syncPermisosRestantes() {
@@ -399,19 +564,34 @@
     // en horas, solo una fecha (inicio) basta visualmente; puedes forzar fin = inicio al enviar
   });
 
+  // ====== Incidencia: cambiar modalidad (días vs horas) ======
+  const incModalidad = document.getElementById('incModalidad');
+  const incFechas = document.getElementById('incFechas');
+  const incHoras = document.getElementById('incHoras');
+
+  function toggleIncHoras() {
+    const byHours = incModalidad?.value === 'por-horas';
+    if (!incHoras) return;
+    incHoras.classList.toggle('hidden', !byHours);
+  }
+  incModalidad?.addEventListener('change', toggleIncHoras);
+  if (incModalidad) toggleIncHoras();
+
   // ====== Contadores de texto ======
   const bindCounter = (formSel, taSel, counterSel) => {
     const form = document.querySelector(formSel);
     if (!form) return;
     const ta = form.querySelector(taSel);
     const counter = document.querySelector(counterSel);
-    ta?.addEventListener('input', () => {
-      counter.textContent = `${ta.value.length}/${ta.maxLength || 300}`;
-    });
+    if (!ta || !counter) return;
+    const upd = () => (counter.textContent = `${ta.value.length}/${ta.maxLength || 300}`);
+    ta.addEventListener('input', upd);
+    upd();
   };
 
   bindCounter('#formPermiso', 'textarea[name="motivo"]', '#permCount');
-  bindCounter('#formIncidencia', 'textarea[name="descripcion"]', '#incCount');
+  // Incidencias usa también "motivo" (paridad con permisos)
+  bindCounter('#formIncidencia', 'textarea[name="motivo"]', '#incCount');
 
   // ====== DnD/Adjuntos ======
   function setupDrop(dropId, inputId, previewId) {
@@ -447,10 +627,10 @@
       const dt = new DataTransfer();
       // agrega archivos arrastrados
       for (const file of e.dataTransfer.files) dt.items.add(file);
-      // si ya había seleccionados por el input, los conservamos
+      // conserva los ya seleccionados
       for (const file of input.files) dt.items.add(file);
 
-      input.files = dt.files; // ✅ esto sí funciona
+      input.files = dt.files; // ✅ funciona
       renderFiles(input.files);
     });
 
@@ -540,7 +720,7 @@
     });
   });
 
-  // ====== Envío: Permiso ======
+  // ====== Envío: Permiso (sin cambios) ======
   (() => {
     const form = document.getElementById('formPermiso');
     if (!form) return;
@@ -714,56 +894,176 @@
     });
   })();
 
-  // ====== Envío: Incidencia ======
-  document.getElementById('formIncidencia')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // ====== Envío: Incidencia (clon de Permisos) ======
+  (() => {
+    const form = document.getElementById('formIncidencia');
+    if (!form) return;
 
-    const f = e.currentTarget;
-    const fd = new FormData(f);
+    const MAX_FILES = 10;
+    const MAX_FILE_MB = 10;
 
-    const categoria = fd.get('categoria');
-    const fecha = fd.get('fecha');
-    const descripcion = (fd.get('descripcion') || '').trim();
-    const impacto = fd.get('impacto');
-    const ubicacion = fd.get('ubicacion');
+    const inputFiles = document.getElementById('incFiles');
+    const preview = document.getElementById('incPreview');
+    const dialog = document.getElementById('dlgIncidencia');
+    const btnSubmit = form.querySelector('button[type="submit"]');
 
-    if (!categoria || !fecha || !descripcion || !impacto) {
-      toast('Revisa los campos requeridos');
-      return;
+    // asegúrate del enctype por si JS falla
+    if (!form.getAttribute('enctype')) {
+      form.setAttribute('enctype', 'multipart/form-data');
     }
 
-    const files = document.getElementById('incFiles').files;
-    const adjuntos = [...files].map((f) => ({ name: f.name, size: f.size }));
-    const id = `INCI-${Date.now()}`;
+    const setLoading = (v) => {
+      if (!btnSubmit) return;
+      btnSubmit.disabled = v;
+      btnSubmit.dataset.loading = v ? '1' : '0';
+      btnSubmit.textContent = v ? 'Enviando…' : 'Enviar reporte';
+    };
 
-    bandeja.push({
-      id,
-      kind: 'incidencia',
-      empleado: '(Tú)',
-      descripcion,
-      fecha,
-      adjuntos,
-      ubicacion,
-      impacto,
-      estatus: 'En revisión',
-      categoria,
+    const validarArchivos = (files) => {
+      if (files.length > MAX_FILES) {
+        toast(`Máximo ${MAX_FILES} archivos.`);
+        return false;
+      }
+      for (const f of files) {
+        if (f.size > MAX_FILE_MB * 1024 * 1024) {
+          toast(`"${f.name}" supera ${MAX_FILE_MB} MB.`);
+          return false;
+        }
+      }
+      return true;
+    };
+
+    // vista previa
+    inputFiles?.addEventListener('change', () => {
+      if (!inputFiles?.files || !preview) return;
+
+      if (!validarArchivos(inputFiles.files)) {
+        inputFiles.value = '';
+        preview.innerHTML = '';
+        return;
+      }
+
+      preview.innerHTML = '';
+      [...inputFiles.files].forEach((f) => {
+        const el = document.createElement('div');
+        el.className = 'px-2 py-1 rounded-lg border text-xs';
+        el.textContent = `${f.name} (${Math.round(f.size / 1024)} KB)`;
+        preview.appendChild(el);
+      });
     });
 
-    renderBandeja();
+    // ENVÍO
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    // Backend real (ejemplo):
-    /*
-    const res = await fetch('/incidencias', { method:'POST', body: fd });
-    const json = await res.json();
-    */
+      const fd = new FormData(form);
 
-    document.getElementById('dlgIncidencia').close();
-    f.reset();
-    document.getElementById('incPreview').innerHTML = '';
-    toast('Incidencia reportada');
-  });
+      // tomar valores (paridad con permisos)
+      const id_usuario = fd.get('id_usuario');
+      const tipo = fd.get('tipo');              // retardo|falta|salida_anticipada|sin_registro|otro
+      const modalidad = fd.get('modalidad');    // por-dias|por-horas
+      const inicio = fd.get('inicio');          // YYYY-MM-DD
+      let   fin = fd.get('fin');                // YYYY-MM-DD
+      let   hInicio = fd.get('hInicio');        // HH:MM
+      let   hFin = fd.get('hFin');              // HH:MM
+      const goce = fd.get('goce');              // con-goce|sin-goce (opcional)
+      const motivo = (fd.get('motivo') || '').trim();
+
+      // validación mínima
+      if (!id_usuario || !tipo || !modalidad || !inicio || !motivo) {
+        toast('Revisa los campos requeridos');
+        return;
+      }
+
+      // normalizaciones iguales al backend
+      if (modalidad === 'por-dias') {
+        if (!fin) fin = inicio;
+        fd.set('fin', fin);
+        fd.set('hInicio', '');
+        fd.set('hFin', '');
+        hInicio = '';
+        hFin = '';
+      } else if (modalidad === 'por-horas') {
+        if (!hInicio || !hFin) {
+          toast('Indica hora inicio y fin para modalidad por horas');
+          return;
+        }
+        if (!fin) fin = inicio; // si cruza medianoche, el form ya enviará fin = inicio+1
+        fd.set('fin', fin);
+      }
+
+      // validar archivos
+      if (inputFiles?.files && !validarArchivos(inputFiles.files)) return;
+
+      // adjuntar explícitamente archivos
+      if (inputFiles && inputFiles.files && inputFiles.files.length) {
+        fd.delete('files'); // evita duplicados
+        for (const file of inputFiles.files) {
+          fd.append('files', file, file.name);
+        }
+      }
+
+      // asegurar motivo recortado
+      fd.set('motivo', motivo);
+
+      setLoading(true);
+
+      try {
+        // Endpoint real de incidencias
+        const res = await fetch('/incidencias', {
+          method: 'POST',
+          body: fd, // no setees Content-Type
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        const json = contentType.includes('application/json')
+          ? await res.json()
+          : { ok: res.ok, msg: res.statusText };
+
+        if (!res.ok || !json?.ok) {
+          toast((json && (json.msg || json.error)) || 'Error al enviar la incidencia');
+          setLoading(false);
+          return;
+        }
+
+        // éxito
+        dialog?.close();
+        form.reset();
+        if (preview) preview.innerHTML = '';
+
+        // actualizar bandeja
+        if (typeof renderBandeja === 'function' && typeof bandeja !== 'undefined') {
+          const rango =
+            modalidad === 'por-dias'
+              ? `${inicio} — ${fin || inicio}`
+              : `${inicio} ${hInicio}–${hFin}${fin && fin !== inicio ? ` (${fin})` : ''}`;
+
+          const filesArr = inputFiles?.files ? [...inputFiles.files] : [];
+          bandeja.unshift({
+            id: json.id_incidencia || `INCI-${Date.now()}`,
+            kind: 'incidencia',
+            empleado: '(Tú)',
+            motivo,
+            rango,
+            adjuntos: filesArr.map((f) => ({ name: f.name, size: f.size })),
+            estatus: json.estatus || 'Pendiente',
+            tipo,
+            modalidad,
+            goce,
+          });
+          renderBandeja();
+        }
+
+        toast('Incidencia enviada');
+      } catch (err) {
+        console.error(err);
+        toast('No se pudo enviar el reporte. Verifica tu conexión.');
+      } finally {
+        setLoading(false);
+      }
+    });
+  })();
 </script>
-
 
 
 
@@ -798,6 +1098,38 @@
       upd();
     }
   })();
+
+  (function () {
+    const selModalidad = document.getElementById('incModalidad');
+    const fechas = document.getElementById('incFechas');
+    const horas = document.getElementById('incHoras');
+    const count = document.getElementById('incCount');
+    const txtMotivo = document.querySelector('#dlgIncidencia textarea[name="motivo"]');
+
+    function toggle() {
+      const v = selModalidad.value;
+      if (v === 'por-horas') {
+        horas.classList.remove('hidden');
+      } else {
+        horas.classList.add('hidden');
+      }
+    }
+
+    if (selModalidad) {
+      selModalidad.addEventListener('change', toggle);
+      toggle();
+    }
+
+    if (txtMotivo && count) {
+      const max = parseInt(txtMotivo.getAttribute('maxlength') || '300', 10);
+      function upd() {
+        count.textContent = (txtMotivo.value.length) + '/' + max;
+      }
+      txtMotivo.addEventListener('input', upd);
+      upd();
+    }
+  })();
+
 </script>
 
 

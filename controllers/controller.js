@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 
 controller.use('/', require('./login_controller'));
 controller.use('/', require('./pendientes_controller'));
+controller.use('/', require('./incidencias_controller'));
 
 controller.post('/acceso/abrir', (req, res) => {
   let { id_usuario, motivofk, observaciones } = req.body;
@@ -515,7 +516,7 @@ controller.post('/newusuarios', async (req, res) => {
         rfc.toUpperCase(),
         nss,
         correo,
-        hashedPassword,
+        password,
         telefono,
         sexo,
         fecha_nacimiento,

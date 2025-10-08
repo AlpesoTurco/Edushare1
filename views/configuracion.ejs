@@ -286,20 +286,20 @@
 
 
   <!-- Políticas de acceso -->
-  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+  <!-- <section class="bg-white rounded-2xl border border-gray-200 p-4">
     <h2 class="text-lg font-semibold text-gray-900 mb-3">Políticas de acceso</h2>
     <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
       <label class="md:col-span-4">
         <span class="text-sm text-gray-700">Política</span>
         <select id="policySelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
-          <!-- Llenar con GET /api/v1/developer/access_policies -->
+          !-- Llenar con GET /api/v1/developer/access_policies --
           <option value="">(Selecciona)</option>
         </select>
       </label>
       <label class="md:col-span-4">
         <span class="text-sm text-gray-700">Horario asignado</span>
         <select id="policySchedule" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
-          <!-- schedule_id de la política -->
+          !-- schedule_id de la política --
           <option value="">(Ninguno)</option>
         </select>
       </label>
@@ -313,45 +313,224 @@
       <button id="btnSavePolicy" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Guardar</button>
       <button id="btnDelPolicy" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50">Eliminar</button>
     </div>
-  </section>
+  </section> -->
 
   <!-- Credenciales: PIN & NFC -->
-  <section class="bg-white rounded-2xl border border-gray-200 p-4">
-    <h2 class="text-lg font-semibold text-gray-900 mb-3">Credenciales</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- PIN -->
-      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-        <div class="text-sm font-medium text-gray-900 mb-2">PIN</div>
+  <!-- Credenciales: PIN & NFC -->
+<section class="bg-white rounded-2xl border border-gray-200 p-4">
+  <h2 class="text-lg font-semibold text-gray-900 mb-3">Credenciales</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <!-- PIN (búsqueda en tiempo real) -->
+    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+      <div class="text-sm font-medium text-gray-900 mb-2">PIN</div>
+
+      <div class="relative">
         <div class="flex items-center gap-2">
-          <input id="pinUserId" placeholder="User ID" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
-          <button id="btnGenPin" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Generar</button>
+          <input id="pinSearch"
+                 type="text"
+                 inputmode="numeric"
+                 placeholder="Escribe un PIN (p. ej. 3841)"
+                 class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 aria-autocomplete="list" aria-expanded="false" aria-controls="pinSuggestions">
+          <button id="btnGenPin"
+                  class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+            Generar
+          </button>
+          <button id="btnClearPin"
+                  class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+            Limpiar
+          </button>
         </div>
-        <p id="pinResult" class="text-xs text-gray-500 mt-2">—</p>
+
+        <!-- Sugerencias -->
+        <div id="pinSuggestions"
+             class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hidden">
+          <!-- JS inyecta <button> con coincidencias -->
+        </div>
       </div>
-      <!-- NFC -->
-      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-        <div class="text-sm font-medium text-gray-900 mb-2">NFC</div>
-        <div class="grid grid-cols-2 gap-2">
-          <input id="nfcUserId" placeholder="User ID" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
-          <input id="nfcCardId" placeholder="Card ID (UID)" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div class="mt-2 flex items-center gap-2">
-          <button id="btnEnrollNfc" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Iniciar enrolamiento</button>
-          <button id="btnCancelNfc" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
-        </div>
-        <p id="nfcResult" class="text-xs text-gray-500 mt-2">—</p>
+
+      <!-- Resultado exacto -->
+      <div id="pinExactResult" class="mt-3">
+        <p id="pinResult" class="text-xs text-gray-500">Escribe un PIN para buscar…</p>
       </div>
     </div>
-  </section>
+
+    <!-- NFC (sin cambios funcionales aún) -->
+    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+      <div class="text-sm font-medium text-gray-900 mb-2">NFC</div>
+      <div class="grid grid-cols-2 gap-2">
+        <input id="nfcUserId" placeholder="User ID"
+               class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        <input id="nfcCardId" placeholder="Card ID (UID)"
+               class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div class="mt-2 flex items-center gap-2">
+        <button id="btnEnrollNfc"
+                class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+          Iniciar enrolamiento
+        </button>
+        <button id="btnCancelNfc"
+                class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Cancelar
+        </button>
+      </div>
+      <p id="nfcResult" class="text-xs text-gray-500 mt-2">—</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ====== Datos MOCK (simulación) ======
+  const MOCK_USERS = [
+    { id: 101, nombre: 'María Gómez',     puesto: 'Recursos Humanos', pin: '3841' },
+    { id: 102, nombre: 'Juan Pérez',      puesto: 'Sistemas',         pin: '7720' },
+    { id: 103, nombre: 'Ana Rodríguez',   puesto: 'Compras',          pin: '1122' },
+    { id: 104, nombre: 'Luis Hernández',  puesto: 'Seguridad',        pin: '4455' },
+    { id: 105, nombre: 'Karla Martínez',  puesto: 'Contabilidad',     pin: '7788' },
+    { id: 106, nombre: 'Diego López',     puesto: 'Logística',        pin: '3344' },
+  ];
+
+  // ====== Helpers ======
+  const $ = (q) => document.querySelector(q);
+  const pinInput = $('#pinSearch');
+  const pinSuggestions = $('#pinSuggestions');
+  const pinResultBox = $('#pinExactResult');
+  const pinResultText = $('#pinResult');
+
+  const btnGenPin = $('#btnGenPin');
+  const btnClearPin = $('#btnClearPin');
+
+  // Debounce simple para input
+  let debounceTimer = null;
+  const debounce = (fn, delay = 150) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(fn, delay);
+  };
+
+  // Render de tarjeta de resultado exacto
+  function renderExact(user) {
+    if (!user) {
+      pinResultBox.innerHTML = `
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 text-sm">
+          No hay coincidencia exacta para ese PIN.
+        </div>`;
+      return;
+    }
+
+    pinResultBox.innerHTML = `
+      <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
+        <img src="https://i.pravatar.cc/80?u=${user.id}" class="w-12 h-12 rounded-lg border border-gray-200" alt="">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-gray-900">${user.nombre}</div>
+          <div class="text-xs text-gray-500">${user.puesto}</div>
+          <div class="mt-1 text-xs text-gray-400">User ID: <span class="text-gray-700">${user.id}</span> • PIN:
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md border border-blue-200 bg-blue-50 text-blue-700 font-medium">
+              ${user.pin}
+            </span>
+          </div>
+        </div>
+        <span class="px-2 py-1 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200">Coincidencia exacta</span>
+      </div>`;
+  }
+
+  // Render de sugerencias (coincidencias parciales)
+  function renderSuggestions(list, query) {
+    if (!query) {
+      pinSuggestions.classList.add('hidden');
+      pinInput.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    const items = list.slice(0, 6).map(u => `
+      <button type="button"
+              data-pin="${u.pin}"
+              class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between">
+        <span>${u.pin}</span>
+        <span class="text-xs text-gray-500 truncate max-w-[60%]">${u.nombre} • ${u.puesto}</span>
+      </button>
+    `).join('');
+
+    if (!items) {
+      pinSuggestions.innerHTML = `
+        <div class="px-3 py-2 text-sm text-gray-500">Sin coincidencias</div>`;
+    } else {
+      pinSuggestions.innerHTML = items;
+    }
+
+    pinSuggestions.classList.remove('hidden');
+    pinInput.setAttribute('aria-expanded', 'true');
+  }
+
+  // Lógica principal de búsqueda
+  function handleSearch() {
+    const q = pinInput.value.trim();
+    pinResultText.textContent = q ? `Buscando “${q}”…` : 'Escribe un PIN para buscar…';
+
+    // Filtro parcial (contenga el texto)
+    const partialMatches = q
+      ? MOCK_USERS.filter(u => u.pin.includes(q))
+      : [];
+
+    renderSuggestions(partialMatches, q);
+
+    // Coincidencia exacta
+    const exact = q ? MOCK_USERS.find(u => u.pin === q) : null;
+    renderExact(exact);
+  }
+
+  // Eventos
+  pinInput.addEventListener('input', () => debounce(handleSearch, 120));
+
+  // Click en sugerencias: coloca el PIN seleccionado
+  pinSuggestions.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-pin]');
+    if (!btn) return;
+    const value = btn.getAttribute('data-pin');
+    pinInput.value = value;
+    handleSearch();
+    pinSuggestions.classList.add('hidden');
+    pinInput.setAttribute('aria-expanded', 'false');
+  });
+
+  // Fuera del combo → cerrar sugerencias
+  document.addEventListener('click', (e) => {
+    if (!pinSuggestions.contains(e.target) && e.target !== pinInput) {
+      pinSuggestions.classList.add('hidden');
+      pinInput.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Generar PIN aleatorio (4 dígitos) — solo UI
+  btnGenPin.addEventListener('click', () => {
+    const rnd = String(Math.floor(1000 + Math.random() * 9000));
+    pinInput.value = rnd;
+    handleSearch();
+  });
+
+  // Limpiar
+  btnClearPin.addEventListener('click', () => {
+    pinInput.value = '';
+    pinSuggestions.classList.add('hidden');
+    pinInput.setAttribute('aria-expanded', 'false');
+    pinResultBox.innerHTML = '';
+    pinResultText.textContent = 'Escribe un PIN para buscar…';
+    pinInput.focus();
+  });
+
+  // Estado inicial
+  handleSearch();
+</script>
+
 
   <!-- Grupos de puertas -->
-  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+  <!-- <section class="bg-white rounded-2xl border border-gray-200 p-4">
     <h2 class="text-lg font-semibold text-gray-900 mb-3">Grupos de puertas</h2>
     <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
       <label class="md:col-span-5">
         <span class="text-sm text-gray-700">Grupo</span>
         <select id="doorGroupSelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
-          <!-- GET /api/v1/developer/door_groups -->
+          !-- GET /api/v1/developer/door_groups --
           <option value="">(Selecciona)</option>
         </select>
       </label>
@@ -365,7 +544,7 @@
         <button id="btnDelGroup" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50">Eliminar</button>
       </div>
     </div>
-  </section>
+  </section> -->
 
 <!-- ================ Modal: Nuevo horario semanal (con scroll) ================= -->
 <div id="modalHorarioSemanal" class="fixed inset-0 z-[60] hidden">

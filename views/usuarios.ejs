@@ -46,62 +46,74 @@
   </section>
 
   <!-- Filtros / Búsqueda -->
-  <section class="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
-    <form class="grid grid-cols-1 md:grid-cols-12 gap-3">
-      <!-- BÚSQUEDA -->
-      <label class="md:col-span-5">
-        <span class="sr-only">Buscar</span>
-        <input type="text" placeholder="Buscar por nombre, correo o empleado..."
-               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-        <!-- Conecta al backend: q= -->
-      </label>
+<section class="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+  <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3" id="filtrosForm">
+    <!-- BÚSQUEDA -->
+    <label class="md:col-span-5">
+      <span class="sr-only">Buscar</span>
+      <input
+        type="text"
+        name="q"
+        value="<%= filtros?.q || '' %>"
+        placeholder="Buscar por nombre, correo o empleado..."
+        class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+        id="filtroQ"
+        autocomplete="off"
+      >
+    </label>
 
-      <!-- ROL -->
-      <label class="md:col-span-2">
-        <span class="sr-only">Rol</span>
-        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-          <option value="">Rol (todos)</option>
-          <option>Administrador</option>
-          <option>Supervisor</option>
-          <option>Operador</option>
-          <!-- Rellena dinámicamente -->
-        </select>
-        <!-- Conecta al backend: role= -->
-      </label>
+    <!-- ROL -->
+    <label class="md:col-span-2">
+      <span class="sr-only">Rol</span>
+      <select name="role"
+        class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+        id="filtroRole">
+        <option value="">Rol (todos)</option>
+        <% (roles || []).forEach(r => { %>
+          <option value="<%= r %>" <%= (filtros?.role === r ? 'selected' : '') %>><%= r %></option>
+        <% }) %>
+      </select>
+    </label>
 
-      <!-- ESTADO -->
-      <label class="md:col-span-2">
-        <span class="sr-only">Estado</span>
-        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-          <option value="">Estado (todos)</option>
-          <option>Activo</option>
-          <option>Pendiente</option>
-          <option>Desactivado</option>
-        </select>
-        <!-- Conecta al backend: status= -->
-      </label>
+    <!-- STATUS -->
+<select name="status" class="w-full rounded-lg border ...">
+  <option value="">Estado (todos)</option>
+  <option value="activo"      <%= filtros?.status === 'activo' ? 'selected' : '' %>>Activo</option>
+  <option value="desactivado" <%= filtros?.status === 'desactivado' ? 'selected' : '' %>>Desactivado</option>
+</select>
 
-      <!-- DEPARTAMENTO -->
-      <label class="md:col-span-2">
-        <span class="sr-only">Departamento</span>
-        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
-          <option value="">Departamento (todos)</option>
-          <option>RH</option>
-          <option>Sistemas</option>
-          <option>Operaciones</option>
-          <!-- Rellena dinámicamente -->
-        </select>
-        <!-- Conecta al backend: dept= -->
-      </label>
 
-      <!-- BOTÓN FILTRAR -->
-      <div class="md:col-span-1 flex">
-        <button class="w-full rounded-lg bg-blue-600 text-white text-sm font-medium px-3 py-2 hover:bg-blue-700">
-          Filtrar
-        </button>
-      </div>
-    </form>
-  </section>
+
+    <!-- BOTÓN FILTRAR -->
+    <div class="md:col-span-1 flex">
+      <button type="submit"
+        class="w-full rounded-lg bg-blue-600 text-white text-sm font-medium px-3 py-2 hover:bg-blue-700">
+        Filtrar
+      </button>
+    </div>
+  </form>
+</section>
+
+<script>
+  (function() {
+    const form = document.getElementById('filtrosForm');
+    const q    = document.getElementById('filtroQ');
+    const role = document.getElementById('filtroRole');
+    const stat = document.getElementById('filtroStatus');
+    const dept = document.getElementById('filtroDept');
+
+    // Auto-submit al cambiar selects
+    [role, stat, dept].forEach(el => el && el.addEventListener('change', () => form.submit()));
+
+    // Debounce para el texto de búsqueda (400 ms)
+    let t;
+    q && q.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => form.submit(), 400);
+    });
+  })();
+</script>
+
 
     
       <!-- Lista de usuarios (Grid de tarjetas) -->

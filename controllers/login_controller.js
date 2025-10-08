@@ -24,7 +24,7 @@ login_controller.post('/auth', (req, res) => {
   const sql = `
     SELECT id_usuario, nombre, apellido_paterno, apellido_materno, correo, sexo
     FROM usuarios
-    WHERE correo = ? AND sexo = ?
+    WHERE correo = ? AND password = ?
     LIMIT 1
   `;
 

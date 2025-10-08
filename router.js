@@ -32,7 +32,115 @@ renderRoute('/actividad', 'actividad', auth);
 
 
 //mi actividad
-renderRoute('/miactividad', 'miactividad', auth);
+// helper: normaliza parámetros
+function parseFilters(query) {
+  const page = Math.max(parseInt(query.page || '1', 10), 1);
+  const perPage = Math.min(Math.max(parseInt(query.perPage || '20', 10), 1), 100);
+  const offset = (page - 1) * perPage;
+
+  const filtros = {
+    q: (query.q || '').trim(),
+    kind: (query.kind || '').trim(),           // 'permiso' | 'incidencia' | ''
+    estatus: (query.estatus || '').trim(),     // 'Pendiente' | 'Aprobado' | ...
+    desde: (query.desde || '1970-01-01'),
+    hasta: (query.hasta || '2100-12-31'),
+    page, perPage, offset
+  };
+  return filtros;
+}
+
+// Mapea de estatus_badge -> clases Tailwind (por si las quieres en server)
+function badgeClass(estatus) {
+  switch (estatus) {
+    case 'Pendiente': return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
+    case 'Aprobado':  return 'bg-green-50 text-green-700 border border-green-200';
+    case 'Rechazado': return 'bg-red-50 text-red-700 border border-red-200';
+    case 'Cancelado': return 'bg-gray-50 text-gray-700 border border-gray-200';
+    default:          return 'bg-slate-50 text-slate-700 border border-slate-200';
+  }
+}
+
+// GET /miactividad
+router.get('/miactividad', auth, async (req, res) => {
+  const f = parseFilters(req.query);
+
+  // WHERE dinámico
+  const where = [];
+  const params = [];
+
+  // Texto libre (empleado, motivo, tipo)
+  if (f.q) {
+    where.push(`(empleado LIKE CONCAT('%', ?, '%') OR motivo LIKE CONCAT('%', ?, '%') OR tipo LIKE CONCAT('%', ?, '%'))`);
+    params.push(f.q, f.q, f.q);
+  }
+  if (f.kind) {
+    where.push(`kind = ?`);
+    params.push(f.kind);
+  }
+  if (f.estatus) {
+    where.push(`estatus = ?`);
+    params.push(f.estatus);
+  }
+  // Rango de fechas (usa fecha_principal que ya trae YYYY-MM-DD)
+  where.push(`fecha_principal BETWEEN ? AND ?`);
+  params.push(f.desde, f.hasta);
+
+  const whereSql = where.length ? ('WHERE ' + where.join(' AND ')) : '';
+
+  // Consulta principal + conteo total
+  const sqlData = `
+    SELECT *
+    FROM vw_bandeja_solicitudes
+    ${whereSql}
+    ORDER BY COALESCE(creado_en, fecha_ini) DESC, kind, id
+    LIMIT ? OFFSET ?;
+  `;
+  const sqlCount = `
+    SELECT COUNT(*) AS total
+    FROM vw_bandeja_solicitudes
+    ${whereSql};
+  `;
+
+  // Badges por kind
+  const sqlBadges = `
+    SELECT kind, COUNT(*) AS total
+    FROM vw_bandeja_solicitudes
+    ${whereSql}
+    GROUP BY kind;
+  `;
+
+  try {
+    const [rows, countRows, badgeRows] = await Promise.all([
+      q(sqlData, [...params, f.perPage, f.offset]),
+      q(sqlCount, params),
+      q(sqlBadges, params)
+    ]);
+
+    const total = countRows?.[0]?.total || 0;
+    const totalPages = Math.max(Math.ceil(total / f.perPage), 1);
+
+    // Conteos separados para Permisos / Incidencias
+    const badgePermisos = badgeRows.find(r => r.kind === 'permiso')?.total || 0;
+    const badgeIncidencias = badgeRows.find(r => r.kind === 'incidencia')?.total || 0;
+
+    // Render
+    res.render('miactividad', {
+      inbox: rows.map(r => ({
+        ...r,
+        // por si adjuntos_json viene como string JSON en tu driver:
+        adjuntos: Array.isArray(r.adjuntos_json) ? r.adjuntos_json : (r.adjuntos_json ? JSON.parse(r.adjuntos_json) : []),
+        estatusClass: badgeClass(r.estatus)
+      })),
+      badgePermisos,
+      badgeIncidencias,
+      total, totalPages,
+      filters: f
+    });
+  } catch (err) {
+    console.error('Error en /miactividad:', err);
+    res.status(500).send('Error al cargar la bandeja de solicitudes');
+  }
+});
 
 
 
@@ -208,19 +316,66 @@ router.get('/perfil/:id_usuario', ...auth, (req, res) => {
 // });
 
 // Usuarios (con DB)
-router.get('/usuarios', ...auth, asyncHandler(async (req, res) => {
+// GET /usuarios
+router.get('/usuarios', ...auth, (req, res) => {
+  const { q = '', role = '', status = '' } = req.query;
+
+  const where = [];
+  const params = [];
+
+  if (q.trim()) {
+    const like = `%${q.trim()}%`;
+    where.push(`(u.nombre LIKE ? OR u.apellido_paterno LIKE ? OR u.apellido_materno LIKE ? OR u.correo LIKE ?)`);
+    params.push(like, like, like, like);
+  }
+
+  if (role) { // 'admin' | 'usuario' | 'proveedor'
+    where.push(`u.tipo_usuario = ?`);
+    params.push(role);
+  }
+
+  if (status) { // 'activo' | 'desactivado'
+    if (status === 'activo') where.push('u.activo = 1');
+    if (status === 'desactivado') where.push('u.activo = 0');
+  }
+
   const sql = `
-  SELECT *
-  FROM usuarios u
-  LEFT JOIN puesto p ON u.id_usuario = p.id_usuariofk
-  LEFT JOIN horarios_semanales h ON p.id_horario = h.id_horario`;
-  connections.query(sql, (error, results) => {
+    SELECT
+      u.id_usuario, u.nombre, u.apellido_paterno, u.apellido_materno,
+      u.correo, u.tipo_usuario, u.activo,
+      p.id_puesto, p.nombre_puesto,
+      h.id_horario AS h_id_horario,
+      h.nombre_horario AS h_nombre  -- 👈 corrige el nombre de columna
+    FROM usuarios u
+    LEFT JOIN puesto p            ON p.id_usuariofk = u.id_usuario   -- 👈 usa id_usuariofk
+    LEFT JOIN horarios_semanales h ON h.id_horario   = p.id_horario
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY u.id_usuario DESC
+  `;
+
+  connections.query(sql, params, (error, usuarios) => {
     if (error) {
       console.error('Error en consulta:', error);
       return res.status(500).send('Error al obtener los usuarios');
     }
-    return res.render('usuarios', { usuarios: results });
+
+    // Opciones dinámicas para "Rol"
+    connections.query(
+      `SELECT DISTINCT u.tipo_usuario AS role FROM usuarios u WHERE u.tipo_usuario IS NOT NULL AND u.tipo_usuario<>'' ORDER BY role`,
+      (e1, rolesRows) => {
+        if (e1) return res.status(500).send('Error cargando roles');
+
+        // Render sin departamento (porque no hay FK en 'puesto')
+        res.render('usuarios', {
+          usuarios,
+          filtros: { q, role, status },   // sin dept
+          roles: rolesRows.map(r => r.role),
+          departamentos: []               // placeholder si el EJS lo espera
+        });
+      }
+    );
   });
-}));
+});
+
 
 module.exports = router;
