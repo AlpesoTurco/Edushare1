@@ -316,15 +316,32 @@
   </section> -->
 
   <!-- Credenciales: PIN & NFC -->
-  <!-- Credenciales: PIN & NFC -->
+<script>
+  window.USUARIOS = <%- JSON.stringify(usuarios || []) %>;
+</script>
+
+<!-- Credenciales: PIN & NFC -->
 <section class="bg-white rounded-2xl border border-gray-200 p-4">
   <h2 class="text-lg font-semibold text-gray-900 mb-3">Credenciales</h2>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-    <!-- PIN (búsqueda en tiempo real) -->
+    <!-- PIN -->
     <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
       <div class="text-sm font-medium text-gray-900 mb-2">PIN</div>
 
+      <!-- Selector de usuario (antes "User ID") -->
+      <div class="mb-2">
+        <div class="text-xs text-gray-600 mb-1">Usuario</div>
+        <div class="relative">
+          <input id="pinUserSearch" placeholder="Buscar por nombre o puesto..."
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <!-- dropdown -->
+          <div id="pinUserDropdown"
+               class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-sm hidden max-h-56 overflow-auto"></div>
+        </div>
+        <input type="hidden" id="pinSelectedUserId">
+      </div>
+
+      <!-- Búsqueda por PIN en tiempo real -->
       <div class="relative">
         <div class="flex items-center gap-2">
           <input id="pinSearch"
@@ -343,27 +360,35 @@
           </button>
         </div>
 
-        <!-- Sugerencias -->
+        <!-- Sugerencias por PIN -->
         <div id="pinSuggestions"
-             class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hidden">
-          <!-- JS inyecta <button> con coincidencias -->
-        </div>
+             class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hidden"></div>
       </div>
 
-      <!-- Resultado exacto -->
+      <!-- Resultado exacto por PIN -->
       <div id="pinExactResult" class="mt-3">
         <p id="pinResult" class="text-xs text-gray-500">Escribe un PIN para buscar…</p>
       </div>
     </div>
 
-    <!-- NFC (sin cambios funcionales aún) -->
+    <!-- NFC -->
     <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
       <div class="text-sm font-medium text-gray-900 mb-2">NFC</div>
+
+      <!-- Selector de usuario (antes "User ID") -->
+      <div class="mb-2">
+        <div class="text-xs text-gray-600 mb-1">Usuario</div>
+        <div class="relative">
+          <input id="nfcUserSearch" placeholder="Buscar por nombre o puesto..."
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div id="nfcUserDropdown"
+               class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-sm hidden max-h-56 overflow-auto"></div>
+        </div>
+        <input type="hidden" id="nfcSelectedUserId">
+      </div>
+
       <div class="grid grid-cols-2 gap-2">
-        <input id="nfcUserId" placeholder="User ID"
-               class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
-        <input id="nfcCardId" placeholder="Card ID (UID)"
-               class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        <input id="nfcCardId" placeholder="Card ID (UID)" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
       </div>
       <div class="mt-2 flex items-center gap-2">
         <button id="btnEnrollNfc"
@@ -381,34 +406,80 @@
 </section>
 
 <script>
-  // ====== Datos MOCK (simulación) ======
-  const MOCK_USERS = [
-    { id: 101, nombre: 'María Gómez',     puesto: 'Recursos Humanos', pin: '3841' },
-    { id: 102, nombre: 'Juan Pérez',      puesto: 'Sistemas',         pin: '7720' },
-    { id: 103, nombre: 'Ana Rodríguez',   puesto: 'Compras',          pin: '1122' },
-    { id: 104, nombre: 'Luis Hernández',  puesto: 'Seguridad',        pin: '4455' },
-    { id: 105, nombre: 'Karla Martínez',  puesto: 'Contabilidad',     pin: '7788' },
-    { id: 106, nombre: 'Diego López',     puesto: 'Logística',        pin: '3344' },
-  ];
-
-  // ====== Helpers ======
+  // ========= Helpers =========
   const $ = (q) => document.querySelector(q);
+  const createUserItem = (u) => `
+    <button type="button" data-id="${u.id_usuario}"
+      class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between">
+      <span class="truncate">${u.nombre_completo}</span>
+      <span class="text-xs text-gray-500 ml-2">${u.puesto || ''}</span>
+    </button>`;
+
+  function mountUserSearch(inputEl, dropdownEl, hiddenIdEl) {
+    const users = Array.isArray(window.USUARIOS) ? window.USUARIOS : [];
+
+    function renderList(list) {
+      if (!list.length) {
+        dropdownEl.innerHTML = `<div class="px-3 py-2 text-sm text-gray-500">Sin resultados</div>`;
+      } else {
+        dropdownEl.innerHTML = list.slice(0, 50).map(createUserItem).join('');
+      }
+      dropdownEl.classList.remove('hidden');
+    }
+
+    inputEl.addEventListener('input', () => {
+      const q = inputEl.value.trim().toLowerCase();
+      if (!q) {
+        dropdownEl.classList.add('hidden');
+        hiddenIdEl.value = '';
+        return;
+      }
+      const res = users.filter(u =>
+        (u.nombre_completo || '').toLowerCase().includes(q) ||
+        (u.puesto || '').toLowerCase().includes(q)
+      );
+      renderList(res);
+    });
+
+    dropdownEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const u = users.find(x => String(x.id_usuario) === String(id));
+      if (u) {
+        inputEl.value = `${u.nombre_completo}${u.puesto ? ' • ' + u.puesto : ''}`;
+        hiddenIdEl.value = u.id_usuario;
+      }
+      dropdownEl.classList.add('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdownEl.contains(e.target) && e.target !== inputEl) {
+        dropdownEl.classList.add('hidden');
+      }
+    });
+  }
+
+  // ========= Monta selectores de usuarios (PIN y NFC) =========
+  mountUserSearch($('#pinUserSearch'), $('#pinUserDropdown'), $('#pinSelectedUserId'));
+  mountUserSearch($('#nfcUserSearch'), $('#nfcUserDropdown'), $('#nfcSelectedUserId'));
+
+  // ========= Búsqueda por PIN (UI, mock) =========
+  // Nota: Aquí no conozco tu fuente real de "pin" por usuario. 
+  // Si más adelante me pasas la tabla/columna, lo adaptamos a fetch('/api/usuarios?pin=...').
   const pinInput = $('#pinSearch');
   const pinSuggestions = $('#pinSuggestions');
   const pinResultBox = $('#pinExactResult');
   const pinResultText = $('#pinResult');
-
   const btnGenPin = $('#btnGenPin');
   const btnClearPin = $('#btnClearPin');
 
-  // Debounce simple para input
-  let debounceTimer = null;
-  const debounce = (fn, delay = 150) => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(fn, delay);
-  };
+  // Si tienes los PINs en tu tabla, podrías rellenar este array desde el backend; por ahora es UI vacía.
+  const MOCK_PINS = []; // [{ pin:'3841', id_usuario: 123, nombre:'...', puesto:'...' }]
 
-  // Render de tarjeta de resultado exacto
+  let debounceTimer = null;
+  const debounce = (fn, d=120) => { clearTimeout(debounceTimer); debounceTimer = setTimeout(fn, d); };
+
   function renderExact(user) {
     if (!user) {
       pinResultBox.innerHTML = `
@@ -417,14 +488,13 @@
         </div>`;
       return;
     }
-
     pinResultBox.innerHTML = `
       <div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
-        <img src="https://i.pravatar.cc/80?u=${user.id}" class="w-12 h-12 rounded-lg border border-gray-200" alt="">
+        <img src="https://i.pravatar.cc/80?u=${user.id_usuario}" class="w-12 h-12 rounded-lg border border-gray-200" alt="">
         <div class="flex-1">
           <div class="text-sm font-medium text-gray-900">${user.nombre}</div>
-          <div class="text-xs text-gray-500">${user.puesto}</div>
-          <div class="mt-1 text-xs text-gray-400">User ID: <span class="text-gray-700">${user.id}</span> • PIN:
+          <div class="text-xs text-gray-500">${user.puesto || ''}</div>
+          <div class="mt-1 text-xs text-gray-400">User ID: <span class="text-gray-700">${user.id_usuario}</span> • PIN:
             <span class="inline-flex items-center px-1.5 py-0.5 rounded-md border border-blue-200 bg-blue-50 text-blue-700 font-medium">
               ${user.pin}
             </span>
@@ -434,81 +504,55 @@
       </div>`;
   }
 
-  // Render de sugerencias (coincidencias parciales)
   function renderSuggestions(list, query) {
     if (!query) {
       pinSuggestions.classList.add('hidden');
       pinInput.setAttribute('aria-expanded', 'false');
       return;
     }
-
     const items = list.slice(0, 6).map(u => `
-      <button type="button"
-              data-pin="${u.pin}"
-              class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between">
+      <button type="button" data-pin="${u.pin}"
+        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between">
         <span>${u.pin}</span>
-        <span class="text-xs text-gray-500 truncate max-w-[60%]">${u.nombre} • ${u.puesto}</span>
-      </button>
-    `).join('');
-
-    if (!items) {
-      pinSuggestions.innerHTML = `
-        <div class="px-3 py-2 text-sm text-gray-500">Sin coincidencias</div>`;
-    } else {
-      pinSuggestions.innerHTML = items;
-    }
-
+        <span class="text-xs text-gray-500 truncate max-w-[60%]">${u.nombre}${u.puesto ? ' • ' + u.puesto : ''}</span>
+      </button>`).join('');
+    pinSuggestions.innerHTML = items || `<div class="px-3 py-2 text-sm text-gray-500">Sin coincidencias</div>`;
     pinSuggestions.classList.remove('hidden');
     pinInput.setAttribute('aria-expanded', 'true');
   }
 
-  // Lógica principal de búsqueda
-  function handleSearch() {
+  function handlePinSearch() {
     const q = pinInput.value.trim();
     pinResultText.textContent = q ? `Buscando “${q}”…` : 'Escribe un PIN para buscar…';
 
-    // Filtro parcial (contenga el texto)
-    const partialMatches = q
-      ? MOCK_USERS.filter(u => u.pin.includes(q))
-      : [];
+    const partial = q ? MOCK_PINS.filter(u => u.pin.includes(q)) : [];
+    renderSuggestions(partial, q);
 
-    renderSuggestions(partialMatches, q);
-
-    // Coincidencia exacta
-    const exact = q ? MOCK_USERS.find(u => u.pin === q) : null;
+    const exact = q ? MOCK_PINS.find(u => u.pin === q) : null;
     renderExact(exact);
   }
 
-  // Eventos
-  pinInput.addEventListener('input', () => debounce(handleSearch, 120));
-
-  // Click en sugerencias: coloca el PIN seleccionado
+  pinInput.addEventListener('input', () => debounce(handlePinSearch, 120));
   pinSuggestions.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-pin]');
     if (!btn) return;
     const value = btn.getAttribute('data-pin');
     pinInput.value = value;
-    handleSearch();
+    handlePinSearch();
     pinSuggestions.classList.add('hidden');
     pinInput.setAttribute('aria-expanded', 'false');
   });
-
-  // Fuera del combo → cerrar sugerencias
   document.addEventListener('click', (e) => {
     if (!pinSuggestions.contains(e.target) && e.target !== pinInput) {
       pinSuggestions.classList.add('hidden');
       pinInput.setAttribute('aria-expanded', 'false');
     }
   });
-
-  // Generar PIN aleatorio (4 dígitos) — solo UI
   btnGenPin.addEventListener('click', () => {
     const rnd = String(Math.floor(1000 + Math.random() * 9000));
     pinInput.value = rnd;
-    handleSearch();
+    handlePinSearch();
   });
-
-  // Limpiar
   btnClearPin.addEventListener('click', () => {
     pinInput.value = '';
     pinSuggestions.classList.add('hidden');
@@ -517,10 +561,60 @@
     pinResultText.textContent = 'Escribe un PIN para buscar…';
     pinInput.focus();
   });
-
-  // Estado inicial
-  handleSearch();
+  handlePinSearch();
 </script>
+<script>
+  // === Enrolamiento NFC: POST /api/nfc/enroll ===
+  const nfcUserIdInput = document.querySelector('#nfcSelectedUserId');
+  const nfcCardIdInput = document.querySelector('#nfcCardId');
+  const nfcResult      = document.querySelector('#nfcResult');
+  const btnEnrollNfc   = document.querySelector('#btnEnrollNfc');
+  const btnCancelNfc   = document.querySelector('#btnCancelNfc');
+  const CSRF_TOKEN     = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || null;
+
+  function setNfcBusy(b){ btnEnrollNfc.disabled=b; btnCancelNfc.disabled=b; btnEnrollNfc.textContent=b?'Enrolando…':'Iniciar enrolamiento'; }
+  function msg(text,kind='info'){
+    const styles={info:'bg-blue-50 border-blue-200 text-blue-800',ok:'bg-green-50 border-green-200 text-green-700',warn:'bg-amber-50 border-amber-200 text-amber-800',error:'bg-rose-50 border-rose-200 text-rose-700'};
+    nfcResult.className=`text-sm mt-2 px-3 py-2 rounded-lg border ${styles[kind]||''}`; nfcResult.textContent=text;
+  }
+
+  async function enrollNfc({forceReplace=false}={}) {
+    const id_usuario = parseInt(nfcUserIdInput.value,10);
+    const numero_tarjeta = (nfcCardIdInput.value||'').trim();
+    if(!id_usuario){ msg('Selecciona un usuario.', 'warn'); return; }
+    if(!numero_tarjeta){ msg('Escribe el Card ID (UID).', 'warn'); return; }
+    if(numero_tarjeta.length>50){ msg('El Card ID excede 50 caracteres.', 'warn'); return; }
+
+    setNfcBusy(true); msg('Procesando…','info');
+    try{
+      const resp = await fetch('/api/nfc/enroll', {
+        method:'POST',
+        headers: {'Content-Type':'application/json', ...(CSRF_TOKEN?{'x-csrf-token':CSRF_TOKEN}:{})},
+        credentials:'same-origin',
+        body: JSON.stringify({ id_usuario, numero_tarjeta, forceReplace })
+      });
+      const data = await resp.json().catch(()=>({}));
+
+      if(resp.ok){ msg(data?.msg||'Tarjeta enrolada.', 'ok'); return; }
+      if(resp.status===409){
+        msg(data?.msg||'Conflicto de asignación.', 'warn');
+        if(confirm((data?.msg||'Conflicto.')+'\n\n¿Forzar reemplazo?')){
+          await enrollNfc({forceReplace:true});
+        }
+        return;
+      }
+      msg(data?.msg||'No se pudo completar el enrolamiento.', 'error');
+    }catch(e){
+      console.error(e); msg('Error de red/servidor.', 'error');
+    }finally{ setNfcBusy(false); }
+  }
+
+  btnEnrollNfc.addEventListener('click', ()=>enrollNfc());
+  btnCancelNfc.addEventListener('click', ()=>{
+    nfcCardIdInput.value=''; msg('—','info');
+  });
+</script>
+
 
 
   <!-- Grupos de puertas -->

@@ -1,5 +1,9 @@
 <%- include ('Plantilla/Inicio') %>
-    <!-- === ACTIVIDAD: KPIs + Filtros + Timeline + Tabla + Modal === -->
+<script>
+  const SEED = <%- JSON.stringify(typeof seed !== 'undefined' ? seed : {items:[], total:0, page:1, perPage:20}) %>;
+</script>
+
+<!-- === ACTIVIDAD: KPIs + Filtros + Timeline + Tabla + Modal === -->
 <section id="actividad" class="space-y-6">
 
   <!-- Encabezado y acciones -->
@@ -37,7 +41,6 @@
     <div class="bg-white rounded-xl border border-gray-200 p-4">
       <div class="text-xs text-gray-500">Prom. tiempo verificación</div>
       <div id="kpiLatency" class="mt-1 text-2xl font-semibold text-gray-900">—</div>
-      <!-- rellena con ms o s si lo manejas -->
     </div>
   </div>
 
@@ -80,10 +83,6 @@
         <span class="sr-only">Dispositivo</span>
         <select id="fDevice" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
           <option value="">Dispositivo (todos)</option>
-          <option value="T-01">Torniquete 1</option>
-          <option value="T-02">Torniquete 2</option>
-          <option value="PU-01">Puerta principal</option>
-          <!-- llena dinámicamente -->
         </select>
       </label>
       <div class="md:col-span-12 flex items-center gap-2">
@@ -95,20 +94,16 @@
 
   <!-- Vista combinada: Timeline + Tabla -->
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-    <!-- Timeline (tarjetas ricas) -->
+    <!-- Timeline -->
     <div class="bg-white rounded-2xl border border-gray-200 p-4">
       <div class="flex items-center justify-between mb-2">
-        <h3 class="text-lg font-semibold text-gray-900">Timeline</h3>
+        <h3 class="text-lg font-semibold text-gray-900">Eventos</h3>
         <span id="tlCount" class="text-sm text-gray-500">0 eventos</span>
       </div>
-      <ol id="timeline" class="relative ml-4 border-l border-gray-200">
-        <!-- JS renderiza <li> aquí -->
-        <!-- Cada item muestra: avatar, nombre, evento, hora, dispositivo, método (NFC/PIN), resultado (ok/fail), motivo, ubicación, operador, id/audit -->
-      </ol>
+      <ol id="timeline" class="relative ml-4 border-l border-gray-200"></ol>
     </div>
 
-    <!-- Tabla (compacta con encabezado fijo) -->
+    <!-- Tabla -->
     <div class="bg-white rounded-2xl border border-gray-200">
       <div class="p-4 flex items-center justify-between">
         <h3 class="text-lg font-semibold text-gray-900">Tabla</h3>
@@ -127,13 +122,9 @@
               <th class="px-4 py-2 text-right">Detalles</th>
             </tr>
           </thead>
-          <tbody id="tbody" class="divide-y divide-gray-100 text-gray-700">
-            <!-- JS renderiza filas -->
-          </tbody>
+          <tbody id="tbody" class="divide-y divide-gray-100 text-gray-700"></tbody>
         </table>
       </div>
-
-      <!-- Paginación -->
       <div class="p-4 flex items-center justify-between">
         <p id="pageInfo" class="text-sm text-gray-500">Mostrando 0–0 de 0</p>
         <div class="flex items-center gap-2">
@@ -152,7 +143,6 @@
         <button id="dlgClose" class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">✕</button>
       </header>
       <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <!-- Col 1 -->
         <div class="space-y-2">
           <div><span class="text-gray-500">Empleado:</span> <span id="dEmpleado" class="font-medium text-gray-900">—</span></div>
           <div><span class="text-gray-500">Puesto:</span> <span id="dPuesto" class="text-gray-900">—</span></div>
@@ -160,7 +150,6 @@
           <div><span class="text-gray-500">Resultado:</span> <span id="dEstado" class="text-gray-900">—</span></div>
           <div><span class="text-gray-500">Motivo:</span> <span id="dMotivo" class="text-gray-900">—</span></div>
         </div>
-        <!-- Col 2 -->
         <div class="space-y-2">
           <div><span class="text-gray-500">Fecha/Hora:</span> <span id="dFecha" class="text-gray-900">—</span></div>
           <div><span class="text-gray-500">Dispositivo:</span> <span id="dDevice" class="text-gray-900">—</span></div>
@@ -177,81 +166,41 @@
 </section>
 
 <script>
-/* ========= FRONTEND PURO (sin backend) =========
-   Reemplaza DATA por tu respuesta real. Mantén las mismas claves.
-   Campos sugeridos por evento:
-   {
-     id, empleado, puesto, avatar, evento ('entrada'|'salida'|'manual'|'denegado'),
-     fecha, // 2025-08-12 09:41:00
-     deviceId, deviceName, metodo ('NFC'|'PIN'|'App'|'Reconocimiento'),
-     estado ('ok'|'fail'), motivo, ubicacion, operador, auditId
-   }
-*/
-const DATA = [
-  {
-    id: 'EVT-1001', empleado: 'Juan Pérez', puesto: 'Operador',
-    avatar: '/img/user-placeholder.jpg', evento: 'entrada',
-    fecha: '2025-08-12 08:30:10', deviceId: 'T-01', deviceName: 'Torniquete 1',
-    metodo: 'NFC', estado: 'ok', motivo: '', ubicacion: 'Recepción', operador: 'Sistema',
-    auditId: 'A-9F31'
-  },
-  {
-    id: 'EVT-1002', empleado: 'María López', puesto: 'Seguridad',
-    avatar: '/img/user-placeholder.jpg', evento: 'denegado',
-    fecha: '2025-08-12 08:45:02', deviceId: 'PU-01', deviceName: 'Puerta principal',
-    metodo: 'NFC', estado: 'fail', motivo: 'Sin permiso de zona', ubicacion: 'Acceso principal', operador: 'Sistema',
-    auditId: 'A-9F32'
-  },
-  {
-    id: 'EVT-1003', empleado: 'Admin', puesto: 'Administrador',
-    avatar: '/img/avatar-admin.png', evento: 'manual',
-    fecha: '2025-08-12 09:05:12', deviceId: 'T-01', deviceName: 'Torniquete 1',
-    metodo: 'App', estado: 'ok', motivo: 'Apertura remota', ubicacion: 'Recepción', operador: 'Admin',
-    auditId: 'A-9F33'
-  }
-];
+/* ======= Estado ======= */
+let DATA = SEED.items || [];
+let TOTAL = SEED.total || 0;
+let page  = SEED.page  || 1;
+let size  = SEED.perPage || 20;
 
-// Estado UI
-let page = 1, size = 8;
 let q = '', range = '24h', tipo = '', estado = '', device = '';
 
-// Utils
-const $ = (q) => document.querySelector(q);
+/* ======= Utils ======= */
+const $  = (q) => document.querySelector(q);
 const $$ = (q) => document.querySelectorAll(q);
+
 const fmtBadge = (ok) =>
   `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}">
      <span class="w-1.5 h-1.5 rounded-full ${ok ? 'bg-green-600' : 'bg-red-600'} mr-2"></span>${ok ? 'Correcto' : 'Denegado'}
    </span>`;
+
 const iconFor = (ev) => {
   if (ev === 'entrada') return '➡️';
-  if (ev === 'salida') return '⬅️';
-  if (ev === 'manual') return '🔓';
+  if (ev === 'salida')  return '⬅️';
+  if (ev === 'manual')  return '🔓';
   return '⛔';
 };
 
-// Filtro local (demo). Reemplaza por paginado desde backend si gustas.
-function getFiltered() {
-  return DATA.filter(r => {
-    const str = (r.empleado + r.puesto + r.deviceName + r.motivo + r.auditId).toLowerCase();
-    const byQ = q ? str.includes(q.toLowerCase()) : true;
-    const byTipo = tipo ? r.evento === tipo : true;
-    const byEstado = estado ? (estado === 'ok' ? r.estado === 'ok' : r.estado === 'fail') : true;
-    const byDevice = device ? r.deviceId === device : true;
-    // Nota: el rango solo es UI en demo. Con backend, filtra por fecha.
-    return byQ && byTipo && byEstado && byDevice;
-  }).sort((a,b) => b.fecha.localeCompare(a.fecha));
-}
-
-// Render KPIs
+/* ======= Render KPIs ======= */
 function renderKpis(rows) {
   $('#kpiTotal').textContent = rows.length;
-  const ok = rows.filter(r => r.estado === 'ok').length;
-  const fail = rows.filter(r => r.estado === 'fail').length;
+  const ok     = rows.filter(r => r.estado === 'ok').length;
+  const fail   = rows.filter(r => r.estado === 'fail').length;
   const manual = rows.filter(r => r.evento === 'manual').length;
+
   $('#kpiOk').textContent = ok;
   $('#kpiFail').textContent = fail;
   $('#kpiManual').textContent = manual;
-  // Placeholders de insights
+
   $('#kpiOkDelta').textContent = ok ? `Tasa éxito ${(ok/Math.max(1,rows.length)*100).toFixed(0)}%` : '—';
   const topReason = rows.filter(r=>r.estado==='fail').reduce((acc,r)=>{
     acc[r.motivo||'—']= (acc[r.motivo||'—']||0)+1; return acc;
@@ -261,10 +210,9 @@ function renderKpis(rows) {
   $('#kpiLatency').textContent = '—';
 }
 
-// Render timeline
+/* ======= Render Timeline ======= */
 function renderTimeline(rows) {
-  const c = $('#timeline');
-  c.innerHTML = '';
+  const c = $('#timeline'); c.innerHTML = '';
   rows.slice(0, 12).forEach(r => {
     const li = document.createElement('li');
     li.className = 'mb-6 ml-3';
@@ -273,10 +221,10 @@ function renderTimeline(rows) {
       <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <div class="flex items-start justify-between">
           <div class="flex items-center">
-            <img src="${r.avatar || '/img/user-placeholder.jpg'}" class="w-10 h-10 rounded-lg border border-gray-200 object-cover" alt="">
+            
             <div class="ml-3">
               <div class="font-medium text-gray-900">${r.empleado}</div>
-              <div class="text-xs text-gray-500">${r.puesto}</div>
+              <div class="text-xs text-gray-500">${r.puesto || ''}</div>
             </div>
           </div>
           <div class="text-right">
@@ -284,7 +232,6 @@ function renderTimeline(rows) {
             <div class="text-xs text-gray-500">${r.fecha}</div>
           </div>
         </div>
-
         <dl class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
           <div><dt class="text-gray-500">Dispositivo</dt><dd class="text-gray-900 font-medium">${r.deviceName} (${r.deviceId})</dd></div>
           <div><dt class="text-gray-500">Método</dt><dd class="text-gray-900">${r.metodo}</dd></div>
@@ -294,11 +241,8 @@ function renderTimeline(rows) {
           <div><dt class="text-gray-500">Operador</dt><dd class="text-gray-900">${r.operador || 'Sistema'}</dd></div>
           <div><dt class="text-gray-500">Audit ID</dt><dd class="text-gray-900">${r.auditId || '—'}</dd></div>
         </dl>
-
         <div class="mt-4 flex items-center gap-2">
           <button data-id="${r.id}" class="btn-detalle px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver detalle</button>
-          <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver empleado</button>
-          <button class="ml-auto px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">Acción rápida</button>
         </div>
       </div>
     `;
@@ -307,21 +251,21 @@ function renderTimeline(rows) {
   $('#tlCount').textContent = `${Math.min(rows.length,12)} de ${rows.length} eventos`;
 }
 
-// Render tabla + paginación
+/* ======= Render Tabla + Paginación ======= */
 function renderTable(rows) {
   const start = (page-1)*size, end = start + size;
   const slice = rows.slice(start, end);
-  const tb = $('#tbody');
-  tb.innerHTML = '';
+  const tb = $('#tbody'); tb.innerHTML = '';
+
   slice.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="px-4 py-2">
         <div class="flex items-center">
-          <img src="${r.avatar || '/img/user-placeholder.jpg'}" class="w-8 h-8 rounded-lg border border-gray-200 object-cover" alt="">
+          
           <div class="ml-2">
             <div class="font-medium text-gray-900">${r.empleado}</div>
-            <div class="text-xs text-gray-500">${r.puesto}</div>
+            <div class="text-xs text-gray-500">${r.puesto || ''}</div>
           </div>
         </div>
       </td>
@@ -336,68 +280,111 @@ function renderTable(rows) {
     `;
     tb.appendChild(tr);
   });
+
   $('#pageInfo').textContent = `Mostrando ${rows.length ? start+1 : 0}–${Math.min(end, rows.length)} de ${rows.length}`;
   $('#prev').disabled = page === 1;
   $('#next').disabled = end >= rows.length;
 
-  // bind detalles
   $$('.btn-detalle').forEach(btn => btn.addEventListener('click', () => openDetail(rows.find(r=>r.id===btn.dataset.id))));
 }
 
-// Modal detalle
+/* ======= Modal Detalle ======= */
 function openDetail(r) {
   if (!r) return;
   $('#dEmpleado').textContent = r.empleado;
-  $('#dPuesto').textContent = r.puesto || '—';
-  $('#dEvento').textContent = r.evento;
-  $('#dEstado').innerHTML = r.estado==='ok' ? 'Correcto' : 'Denegado';
-  $('#dMotivo').textContent = r.motivo || '—';
-  $('#dFecha').textContent = r.fecha;
-  $('#dDevice').textContent = `${r.deviceName} (${r.deviceId})`;
-  $('#dMetodo').textContent = r.metodo || '—';
-  $('#dUbicacion').textContent = r.ubicacion || '—';
-  $('#dAudit').textContent = r.auditId || '—';
-  const dlg = $('#dlg'); dlg.showModal();
+  $('#dPuesto').textContent   = r.puesto || '—';
+  $('#dEvento').textContent   = r.evento;
+  $('#dEstado').innerHTML     = r.estado==='ok' ? 'Correcto' : 'Denegado';
+  $('#dMotivo').textContent   = r.motivo || '—';
+  $('#dFecha').textContent    = r.fecha;
+  $('#dDevice').textContent   = `${r.deviceName} (${r.deviceId})`;
+  $('#dMetodo').textContent   = r.metodo || '—';
+  $('#dUbicacion').textContent= r.ubicacion || '—';
+  $('#dAudit').textContent    = r.auditId || '—';
+  $('#dlg').showModal();
 }
 $('#dlgClose')?.addEventListener('click', ()=> $('#dlg').close());
-$('#dlgOk')?.addEventListener('click', ()=> $('#dlg').close());
+$('#dlgOk')?.addEventListener('click',   ()=> $('#dlg').close());
 
-// Eventos UI
+/* ======= Carga desde backend ======= */
+async function loadData() {
+  const params = new URLSearchParams({
+    page: String(page),
+    perPage: String(size),
+    q, range, tipo, estado, device
+  });
+  // Para "solo mi ID" cambia a /api/actividad/mia
+  const res = await fetch(`/api/actividad?${params.toString()}`, { headers: { 'Accept':'application/json' } });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Error al cargar datos');
+  DATA = json.items || [];
+  TOTAL = json.total || 0;
+}
+
+async function refresh() {
+  try { await loadData(); } catch(e){ console.error(e); }
+  renderKpis(DATA);
+  renderTimeline(DATA);
+  renderTable(DATA);
+}
+
+/* ======= Listeners UI ======= */
 $('#btnFilter').addEventListener('click', (e)=>{
   e.preventDefault();
   q = $('#fQ').value.trim();
-  range = $('#fRange').value; // integrar en backend
+  range = $('#fRange').value;
   tipo = $('#fTipo').value;
   estado = $('#fEstado').value;
   device = $('#fDevice').value;
   page = 1;
   refresh();
 });
+
 $('#btnClear').addEventListener('click', ()=>{
-  $('#filters').reset(); q=''; range='24h'; tipo=''; estado=''; device=''; page=1; refresh();
+  $('#filters').reset();
+  q=''; range='24h'; tipo=''; estado=''; device='';
+  page=1; refresh();
 });
+
 $('#prev').addEventListener('click', ()=>{ page=Math.max(1,page-1); refresh(); });
 $('#next').addEventListener('click', ()=>{ page=page+1; refresh(); });
 $('#btnRefresh').addEventListener('click', refresh);
+
+/* ======= Export CSV ======= */
 $('#btnExport').addEventListener('click', ()=>{
-  const rows = getFiltered();
+  const rows = DATA;
   const csv = ['id,empleado,puesto,evento,fecha,deviceId,deviceName,metodo,estado,motivo,ubicacion,operador,auditId']
     .concat(rows.map(r => [
-      r.id, r.empleado, r.puesto, r.evento, r.fecha, r.deviceId, r.deviceName, r.metodo, r.estado, (r.motivo||''), (r.ubicacion||''), (r.operador||''), (r.auditId||'')
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')))
+      r.id, r.empleado, r.puesto || '', r.evento, r.fecha, r.deviceId, r.deviceName, r.metodo, r.estado, (r.motivo||''), (r.ubicacion||''), (r.operador||''), (r.auditId||'')
+    ].map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')))
     .join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'actividad.csv'; a.click();
 });
 
-// Ciclo de render
-function refresh(){
-  const filtered = getFiltered();
-  renderKpis(filtered);
-  renderTimeline(filtered);
-  renderTable(filtered);
-}
-refresh();
+/* ======= Poblar dispositivos ======= */
+(async function fillDevices(){
+  try {
+    const resp = await fetch('/api/dispositivos');
+    const j = await resp.json();
+    if (j.ok) {
+      const sel = document.getElementById('fDevice');
+      j.items.forEach(d=>{
+        const o = document.createElement('option');
+        o.value = d.id; o.textContent = d.nombre;
+        sel.appendChild(o);
+      });
+    }
+  } catch(_) {}
+})();
+
+/* ======= Primer pintado (SEED) y sincronización ======= */
+(function firstPaint(){
+  renderKpis(DATA);
+  renderTimeline(DATA);
+  renderTable(DATA);
+  refresh();
+})();
 </script>
 
 <%- include ('Plantilla/Final') %>

@@ -28,7 +28,208 @@ const auth = [requireAuthView];
 // Dispositivos, Actividad, Configuración, Nuevo Usuario, Perfil
 renderRoute('/dispositivos', 'dispositivos', auth);
 renderRoute('/nuevousuario', 'nuevousuario', auth);
-renderRoute('/actividad', 'actividad', auth);
+/* -------------------- Helpers de filtros -------------------- */
+function parseFilters(query) {
+  const page = Math.max(parseInt(query.page || '1', 10), 1);
+  const perPage = Math.min(Math.max(parseInt(query.perPage || '20', 10), 1), 100);
+
+  const range = (query.range || '24h');
+  const now = new Date();
+  const hasta = new Date(now);
+  const desde = new Date(now);
+  if (range === 'hoy')   { desde.setHours(0,0,0,0); }
+  if (range === '24h')  { desde.setHours(desde.getHours() - 24); }
+  if (range === 'semana'){ desde.setDate(desde.getDate() - 7); }
+  if (range === 'mes')  { desde.setMonth(desde.getMonth() - 1); }
+
+  const fmt = (d)=> d.toISOString().slice(0,19).replace('T',' ');
+  return {
+    q: (query.q || '').trim(),
+    tipo: (query.tipo || '').trim(),       // entrada|salida|manual|comida_entrada|comida_salida
+    estado: (query.estado || '').trim(),   // ok|fail (por ahora solo ok en tu BD)
+    device: (query.device || '').trim(),   // id_dispositivo
+    range,
+    desde: fmt(desde),
+    hasta: fmt(hasta),
+    page, perPage, offset: (page-1)*perPage
+  };
+}
+
+function buildWhere(f, onlyUserId = null) {
+  const where = [];
+  const params = [];
+
+  if (onlyUserId != null) { where.push('id_usuario = ?'); params.push(onlyUserId); }
+  if (f.q) {
+    where.push(`(
+      empleado LIKE CONCAT('%', ?, '%')
+      OR puesto LIKE CONCAT('%', ?, '%')
+      OR device_name LIKE CONCAT('%', ?, '%')
+      OR motivo LIKE CONCAT('%', ?, '%')
+      OR CAST(audit_id AS CHAR) LIKE CONCAT('%', ?, '%')
+    )`);
+    params.push(f.q, f.q, f.q, f.q, f.q);
+  }
+  if (f.tipo)   { where.push('evento = ?'); params.push(f.tipo); }
+  if (f.estado) { where.push('estado = ?'); params.push(f.estado); }
+  if (f.device) { where.push('device_id = ?'); params.push(f.device); }
+
+  where.push('fecha BETWEEN ? AND ?'); params.push(f.desde, f.hasta);
+
+  return { whereSql: where.length ? ('WHERE ' + where.join(' AND ')) : '', params };
+}
+
+/* -------------------- API: Actividad (general) -------------------- */
+router.get('/api/actividad', auth, async (req, res) => {
+  const f = parseFilters(req.query);
+  const { whereSql, params } = buildWhere(f);
+
+  const sqlData = `
+    SELECT * FROM vw_actividad_reciente
+    ${whereSql}
+    ORDER BY fecha DESC
+    LIMIT ? OFFSET ?;
+  `;
+  const sqlCount = `
+    SELECT COUNT(*) AS total
+    FROM vw_actividad_reciente
+    ${whereSql};
+  `;
+
+  try {
+    const rows      = await q(sqlData,  [...params, f.perPage, f.offset]);
+    const countRows = await q(sqlCount, params);
+    const total = countRows?.[0]?.total || 0;
+
+    const items = rows.map(r => ({
+      id: r.id_evento,
+      empleado: r.empleado,
+      puesto: r.puesto || '',
+      avatar: '/img/user-placeholder.jpg',
+      evento: r.evento,
+      fecha: r.fecha,
+      deviceId: r.device_id,
+      deviceName: r.device_name,
+      metodo: r.metodo,
+      estado: r.estado,              // 'ok'
+      motivo: r.motivo,
+      ubicacion: r.ubicacion,
+      operador: r.operador,
+      auditId: String(r.audit_id),
+    }));
+
+    res.json({ ok: true, items, total, page: f.page, perPage: f.perPage });
+  } catch (err) {
+    console.error('GET /api/actividad', err);
+    res.status(500).json({ ok:false, error:'Error al consultar actividad' });
+  }
+});
+
+/* -------------------- API: Actividad (solo mi ID) -------------------- */
+router.get('/api/actividad/mia', auth, async (req, res) => {
+  const me = req.user?.id_usuario || res.locals?.user?.id_usuario;
+  if (!me) return res.status(401).json({ ok:false, error:'No autenticado' });
+
+  const f = parseFilters(req.query);
+  const { whereSql, params } = buildWhere(f, me);
+
+  const sqlData = `
+    SELECT * FROM vw_actividad_reciente
+    ${whereSql}
+    ORDER BY fecha DESC
+    LIMIT ? OFFSET ?;
+  `;
+  const sqlCount = `
+    SELECT COUNT(*) AS total
+    FROM vw_actividad_reciente
+    ${whereSql};
+  `;
+
+  try {
+    const rows      = await q(sqlData,  [...params, f.perPage, f.offset]);
+    const countRows = await q(sqlCount, params);
+    const total = countRows?.[0]?.total || 0;
+
+    const items = rows.map(r => ({
+      id: r.id_evento,
+      empleado: r.empleado,
+      puesto: r.puesto || '',
+      avatar: '/img/user-placeholder.jpg',
+      evento: r.evento,
+      fecha: r.fecha,
+      deviceId: r.device_id,
+      deviceName: r.device_name,
+      metodo: r.metodo,
+      estado: r.estado,
+      motivo: r.motivo,
+      ubicacion: r.ubicacion,
+      operador: r.operador,
+      auditId: String(r.audit_id),
+    }));
+
+    res.json({ ok: true, items, total, page: f.page, perPage: f.perPage });
+  } catch (err) {
+    console.error('GET /api/actividad/mia', err);
+    res.status(500).json({ ok:false, error:'Error al consultar mi actividad' });
+  }
+});
+
+/* -------------------- API: Dispositivos (combo) -------------------- */
+router.get('/api/dispositivos', auth, async (req, res) => {
+  try {
+    const rows = await q(
+      `SELECT id_dispositivo AS id, nombre_dispositivo AS nombre
+       FROM dispositivos
+       ORDER BY nombre_dispositivo ASC`
+    );
+    res.json({ ok:true, items: rows });
+  } catch (err) {
+    console.error('GET /api/dispositivos', err);
+    res.status(500).json({ ok:false, error:'Error al listar dispositivos' });
+  }
+});
+
+/* -------------------- SSR: /actividad con seed -------------------- */
+router.get('/actividad', auth, async (req, res) => {
+  const f = parseFilters({ page: 1, perPage: 20, range: '24h' });
+  const { whereSql, params } = buildWhere(f);
+  try {
+    const rows = await q(
+      `SELECT * FROM vw_actividad_reciente ${whereSql} ORDER BY fecha DESC LIMIT ? OFFSET ?;`,
+      [...params, f.perPage, f.offset]
+    );
+    const countRows = await q(
+      `SELECT COUNT(*) AS total FROM vw_actividad_reciente ${whereSql};`,
+      params
+    );
+    const total = countRows?.[0]?.total || 0;
+
+    const items = rows.map(r => ({
+      id: r.id_evento,
+      empleado: r.empleado,
+      puesto: r.puesto || '',
+      avatar: '/img/user-placeholder.jpg',
+      evento: r.evento,
+      fecha: r.fecha,
+      deviceId: r.device_id,
+      deviceName: r.device_name,
+      metodo: r.metodo,
+      estado: r.estado,
+      motivo: r.motivo,
+      ubicacion: r.ubicacion,
+      operador: r.operador,
+      auditId: String(r.audit_id),
+    }));
+
+    res.render('actividad', {
+      seed: { items, total, page: f.page, perPage: f.perPage },
+      user: req.user || null
+    });
+  } catch (err) {
+    console.error('GET /actividad', err);
+    res.status(500).send('Error al cargar actividad');
+  }
+});
 
 
 //mi actividad
@@ -232,16 +433,46 @@ router.get('/home', ...auth, async (req, res) => {
 
 
 //Ver configuracion
+// Ver configuracion
 router.get('/configuracion', ...auth, asyncHandler(async (req, res) => {
-  const sql = 'SELECT * FROM horarios_semanales';
-  connections.query(sql, (error, results) => {
-    if (error) {
-      console.error('Error en consulta:', error);
+  const sqlHorarios = 'SELECT * FROM horarios_semanales ORDER BY nombre_horario ASC';
+  const sqlUsuarios = `
+    SELECT
+  u.id_usuario,
+  CONCAT_WS(' ', u.nombre, u.apellido_paterno, u.apellido_materno) AS nombre_completo,
+  COALESCE(p.nombre_puesto, '') AS puesto
+FROM usuarios u
+LEFT JOIN puesto p ON p.id_usuariofk = u.id_usuario
+WHERE (u.activo = 1 OR u.activo IS NULL)
+ORDER BY nombre_completo ASC;
+
+  `;
+
+  connections.query(sqlHorarios, (err1, horarios) => {
+    if (err1) {
+      console.error('Error en consulta horarios:', err1);
       return res.status(500).send('Error al obtener los horarios');
     }
-    return res.render('configuracion', { horarios: results });
+    connections.query(sqlUsuarios, (err2, usuarios) => {
+      if (err2) {
+        console.error('Error en consulta usuarios:', err2);
+        return res.status(500).send('Error al obtener los usuarios');
+      }
+      return res.render('configuracion', { horarios, usuarios });
+    });
   });
 }));
+
+// router.get('/configuracion', ...auth, asyncHandler(async (req, res) => {
+//   const sql = 'SELECT * FROM horarios_semanales';
+//   connections.query(sql, (error, results) => {
+//     if (error) {
+//       console.error('Error en consulta:', error);
+//       return res.status(500).send('Error al obtener los horarios');
+//     }
+//     return res.render('configuracion', { horarios: results });
+//   });
+// }));
 
 
 //Editar el usuario

@@ -9,6 +9,166 @@ controller.use('/', require('./login_controller'));
 controller.use('/', require('./pendientes_controller'));
 controller.use('/', require('./incidencias_controller'));
 
+controller.post('/api/nfc/enroll', (req, res) => {
+  let { id_usuario, numero_tarjeta, forceReplace } = req.body;
+
+  // ===== Validaciones básicas =====
+  id_usuario = parseInt(id_usuario, 10);
+  numero_tarjeta = (numero_tarjeta || '').toString().trim();
+  forceReplace = Boolean(forceReplace);
+
+  if (!id_usuario || !numero_tarjeta) {
+    return res.status(400).json({ ok: false, msg: 'Faltan datos: id_usuario y numero_tarjeta' });
+  }
+  if (numero_tarjeta.length > 50) {
+    return res.status(400).json({ ok: false, msg: 'numero_tarjeta excede 50 caracteres' });
+  }
+
+  // ===== 1) Verificar que el usuario exista =====
+  const sqlUser = 'SELECT id_usuario FROM usuarios WHERE id_usuario = ? LIMIT 1';
+  connections.query(sqlUser, [id_usuario], (errU, rowsU) => {
+    if (errU) {
+      console.error('Error verificando usuario:', errU);
+      return res.status(500).json({ ok: false, msg: 'Error verificando usuario' });
+    }
+    if (!rowsU?.length) {
+      return res.status(400).json({ ok: false, msg: 'Usuario no existe' });
+    }
+
+    // ===== 2) ¿Existe ya esta tarjeta? =====
+    const sqlCardByNumber = `
+      SELECT id_tarjeta, numero_tarjeta, id_usuario 
+      FROM tarjeta_nfc 
+      WHERE numero_tarjeta = ? 
+      LIMIT 1`;
+    connections.query(sqlCardByNumber, [numero_tarjeta], (errC, rowsC) => {
+      if (errC) {
+        console.error('Error consultando tarjeta por numero:', errC);
+        return res.status(500).json({ ok: false, msg: 'Error consultando tarjeta' });
+      }
+
+      const card = rowsC?.[0] || null;
+
+      // Helper: borra tarjeta actual del usuario (si tiene) → para poder asignar otra
+      const deleteUserCard = (cb) => {
+        const sqlDel = 'DELETE FROM tarjeta_nfc WHERE id_usuario = ?';
+        connections.query(sqlDel, [id_usuario], (errD) => {
+          if (errD) {
+            console.error('Error eliminando tarjeta previa del usuario:', errD);
+            return cb(errD);
+          }
+          cb(null);
+        });
+      };
+
+      // ===== Caso A: la tarjeta ya existe =====
+      if (card) {
+        // A1) Ya está asociada a este mismo usuario → OK idempotente
+        if (card.id_usuario === id_usuario) {
+          return res.json({
+            ok: true,
+            msg: 'Tarjeta ya estaba enrolada con este usuario',
+            id_tarjeta: card.id_tarjeta,
+            id_usuario,
+            numero_tarjeta
+          });
+        }
+
+        // A2) Tarjeta pertenece a otro usuario
+        if (!forceReplace) {
+          return res.status(409).json({
+            ok: false,
+            msg: 'Esta tarjeta ya está asignada a otro usuario. Envía forceReplace=true para reasignar.'
+          });
+        }
+
+        // A3) Reasignar tarjeta a este usuario (forceReplace=true)
+        //    - Primero, elimina cualquier tarjeta que tenga este usuario (por UNIQUE en id_usuario)
+        deleteUserCard((errDel) => {
+          if (errDel) return res.status(500).json({ ok: false, msg: 'Error preparando reasignación' });
+
+          const sqlUpdate = 'UPDATE tarjeta_nfc SET id_usuario = ? WHERE id_tarjeta = ?';
+          connections.query(sqlUpdate, [id_usuario, card.id_tarjeta], (errUp, resultUp) => {
+            if (errUp) {
+              console.error('Error reasignando tarjeta:', errUp);
+              return res.status(500).json({ ok: false, msg: 'Error reasignando tarjeta' });
+            }
+            return res.json({
+              ok: true,
+              msg: 'Tarjeta reasignada al usuario',
+              id_tarjeta: card.id_tarjeta,
+              id_usuario,
+              numero_tarjeta
+            });
+          });
+        });
+
+        return; // fin Caso A
+      }
+
+      // ===== Caso B: la tarjeta NO existe → intentar insertar nueva fila
+      const sqlInsert = `
+        INSERT INTO tarjeta_nfc (numero_tarjeta, id_usuario)
+        VALUES (?, ?)
+      `;
+      connections.query(sqlInsert, [numero_tarjeta, id_usuario], (errIns, resultIns) => {
+        if (!errIns) {
+          return res.status(201).json({
+            ok: true,
+            msg: 'Tarjeta enrolada',
+            id_tarjeta: resultIns.insertId,
+            id_usuario,
+            numero_tarjeta
+          });
+        }
+
+        // B1) Violación de UNIQUE en id_usuario → el usuario ya tenía una tarjeta
+        if (errIns.code === 'ER_DUP_ENTRY') {
+          if (!forceReplace) {
+            return res.status(409).json({
+              ok: false,
+              msg: 'El usuario ya tiene una tarjeta asignada. Envía forceReplace=true para reemplazarla.'
+            });
+          }
+
+          // Reemplazo controlado: borra la tarjeta del usuario y vuelve a insertar
+          deleteUserCard((errDel) => {
+            if (errDel) {
+              return res.status(500).json({ ok: false, msg: 'Error preparando reemplazo de tarjeta' });
+            }
+            connections.query(sqlInsert, [numero_tarjeta, id_usuario], (errIns2, resultIns2) => {
+              if (errIns2) {
+                // Puede fallar si simultáneamente alguien insertó la misma numero_tarjeta
+                if (errIns2.code === 'ER_DUP_ENTRY') {
+                  return res.status(409).json({
+                    ok: false,
+                    msg: 'Esta numero_tarjeta fue tomada en paralelo por otro usuario. Intenta nuevamente.'
+                  });
+                }
+                console.error('Error insertando tarjeta tras delete:', errIns2);
+                return res.status(500).json({ ok: false, msg: 'Error asignando la nueva tarjeta' });
+              }
+              return res.status(201).json({
+                ok: true,
+                msg: 'Tarjeta reemplazada correctamente',
+                id_tarjeta: resultIns2.insertId,
+                id_usuario,
+                numero_tarjeta
+              });
+            });
+          });
+          return;
+        }
+
+        console.error('Error insertando tarjeta:', errIns);
+        return res.status(500).json({ ok: false, msg: 'Error enrolando tarjeta' });
+      });
+    });
+  });
+});
+
+
+
 controller.post('/acceso/abrir', (req, res) => {
   let { id_usuario, motivofk, observaciones } = req.body;
 
