@@ -185,26 +185,117 @@ const activo = (u?.activo === 1 || u?.activo === true);
 
     </section>
     
+    <!-- Reporte semanal: horas trabajadas vs programadas -->
+<section class="bg-white rounded-2xl border border-gray-200 p-5 mt-6">
+  <h3 class="text-lg font-semibold text-gray-800 mb-4">Horas semanales</h3>
+
+  <% if (Array.isArray(reporteSemanal) && reporteSemanal.length) { %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600">
+          <tr>
+            <th class="px-3 py-2 text-left font-medium">Horas Trabajadas</th>
+            <th class="px-3 py-2 text-left font-medium">Horas Programadas</th>
+            <th class="px-3 py-2 text-left font-medium">Horas Extras</th>
+            <th class="px-3 py-2 text-left font-medium">Días Trabajados</th>
+            <th class="px-3 py-2 text-left font-medium">Cumplimiento</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <% reporteSemanal.forEach(r => {
+               const okHoras = (r.horas_trabajadas && r.horas_programadas) && (r.horas_trabajadas >= r.horas_programadas);
+               const diasTrab = Number(r.dias_trabajados || 0);
+               const diasProg = Number(r.dias_programados || 0);
+               const pctDias = Number(r.porcentaje_cumplimiento_dias || 0);
+               const okDias = diasProg > 0 && diasTrab >= diasProg;
+          %>
+            <tr>
+              <td class="px-3 py-2 font-medium text-gray-900"><%= r.horas_trabajadas %></td>
+              <td class="px-3 py-2"><%= r.horas_programadas %></td>
+              <td class="px-3 py-2"><%= r.extra_estimado %></td>
+
+              <!-- Días: 3/7 (43%) -->
+              <td class="px-3 py-2">
+                <span class="inline-flex items-center gap-2">
+                  <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
+                    <%= diasTrab %>/<%= diasProg %>
+                  </span>
+                  <span class="text-gray-500 text-xs">(<%= pctDias %>% )</span>
+                </span>
+              </td>
+
+              <!-- Cumplimiento (por horas) -->
+              <td class="px-3 py-2">
+                <% if (okHoras) { %>
+                  <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-100">Cumplido</span>
+                <% } else { %>
+                  <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-100">Pendiente</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p class="text-sm text-gray-500">Sin datos semanales.</p>
+  <% } %>
+</section>
+<br>
+
 
     <!-- Historial -->
-    <section class="bg-white rounded-2xl border border-gray-200 p-5">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Historial de entradas y salidas</h3>
-      <% if (typeof historial !== 'undefined' && Array.isArray(historial) && historial.length) { %>
-        <ul class="divide-y divide-gray-200 text-sm">
-          <% historial.forEach(mov => { %>
-            <li class="py-3 flex justify-between items-center">
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 <%= mov.tipo === 'Entrada' ? 'bg-green-500' : 'bg-red-500' %> rounded-full"></span>
-                <%= mov.tipo %>
-              </div>
-              <span class="text-gray-500"><%= new Date(mov.fecha_hora).toLocaleString('es-MX') %></span>
-            </li>
-          <% }) %>
-        </ul>
-      <% } else { %>
-        <p class="text-sm text-gray-500">Sin movimientos recientes.</p>
-      <% } %>
-    </section>
+<section class="bg-white rounded-2xl border border-gray-200 p-5">
+  <h3 class="text-lg font-semibold text-gray-800 mb-4">Historial de entradas y salidas</h3>
+
+  <% if (Array.isArray(historial) && historial.length) { %>
+    <ul class="divide-y divide-gray-200 text-sm">
+      <% historial.forEach(mov => { 
+        // Color del punto según el tipo:
+        let dot = 'bg-gray-400';
+        if (mov.tipo === 'Entrada') dot = 'bg-green-500';
+        else if (mov.tipo === 'Salida') dot = 'bg-red-500';
+        else if (mov.tipo === 'Salida a comida') dot = 'bg-amber-500';
+        else if (mov.tipo === 'Regreso de comida') dot = 'bg-emerald-500';
+
+        // Fecha/hora legible (si viene como 'YYYY-MM-DD HH:MM:SS'):
+        let fechaLegible = '';
+        try {
+          fechaLegible = new Date(mov.fecha_hora.replace(' ', 'T')).toLocaleString('es-MX');
+        } catch (e) {
+          // fallback seguro
+          fechaLegible = `${mov.fecha || ''} ${mov.hora || ''}`.trim();
+        }
+      %>
+        <li class="py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 <%= dot %> rounded-full"></span>
+            <span class="font-medium text-gray-900"><%= mov.tipo %></span>
+            <% if (mov.nombre_dispositivo) { %>
+              <span class="hidden sm:inline text-gray-400">•</span>
+              <span class="text-gray-500">Dispositivo: <%= mov.nombre_dispositivo %></span>
+            <% } %>
+            <% if (mov.registro_manual) { %>
+              <span class="ml-2 inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-700 ring-1 ring-purple-100">
+                Manual
+              </span>
+            <% } %>
+          </div>
+
+          <div class="flex flex-col sm:items-end">
+            <span class="text-gray-500"><%= fechaLegible %> <span class="uppercase">(<%= mov.dia_semana || '' %>)</span></span>
+            <% if (mov.observaciones) { %>
+              <span class="text-gray-500 line-clamp-1"><%= mov.observaciones %></span>
+            <% } %>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="text-sm text-gray-500">Sin movimientos recientes.</p>
+  <% } %>
+</section>
+
   <% } %>
 </main>
 

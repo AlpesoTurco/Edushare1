@@ -139,7 +139,6 @@
           <th class="px-4 py-2 text-left">Rango / Fecha</th>
           <th class="px-4 py-2 text-left">Adjuntos</th>
           <th class="px-4 py-2 text-left">Estatus</th>
-          <th class="px-4 py-2 text-right">Acciones</th>
         </tr>
       </thead>
       <tbody id="inboxBody" class="divide-y divide-gray-100 text-gray-700">
@@ -431,15 +430,7 @@ function renderInbox(rows) {
       </td>
       <td class="px-4 py-2 align-top">${adjuntosCell(r)}</td>
       <td class="px-4 py-2 align-top">${estatusBadge(r)}</td>
-      <td class="px-4 py-2 align-top text-right">
-        <div class="inline-flex gap-2">
-          <a href="${r.ruta}" class="px-2 py-1 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Ver</a>
-          ${r.estatus === 'Pendiente' ? `
-            <button class="px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700" data-approve="${r.kind}:${r.id}">Aprobar</button>
-            <button class="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700" data-reject="${r.kind}:${r.id}">Rechazar</button>
-          ` : ''}
-        </div>
-      </td>
+      
     </tr>
   `).join('');
   tbody.innerHTML = html;

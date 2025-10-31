@@ -1,0 +1,458 @@
+<%- include ('Plantilla/Inicio') %>
+
+<section id="solicitudes" class="space-y-6">
+  <!-- Encabezado -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h2 class="text-xl md:text-2xl font-semibold text-gray-900">Solicitudes</h2>
+      <p class="text-sm text-gray-500">Revisa, filtra y resuelve permisos e incidencias.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnExport" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Exportar CSV</button>
+      <button id="btnRefresh" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Actualizar</button>
+    </div>
+  </div>
+
+  <!-- Resumen (Badges) -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Permisos</div>
+      <div class="mt-1 text-2xl font-semibold text-blue-700"><span id="badgePermisos">0</span></div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Incidencias</div>
+      <div class="mt-1 text-2xl font-semibold text-amber-700"><span id="badgeIncidencias">0</span></div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Pendientes</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900" id="kpiPendientes">0</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Resueltas (7d)</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900" id="kpiResueltas">—</div>
+    </div>
+  </div>
+
+  <!-- Barra de filtros -->
+  <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-4">
+        <span class="sr-only">Buscar</span>
+        <input id="fQ" type="text" placeholder="Buscar: nombre, ID, motivo…"
+               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Rango</span>
+        <select id="fRange" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Rango</option>
+          <option value="hoy">Hoy</option>
+          <option value="24h">Últimas 24h</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Evento</span>
+        <select id="fTipo" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Tipo (todos)</option>
+          <option value="permiso">Permiso</option>
+          <option value="incidencia">Incidencia</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Estatus</span>
+        <select id="fStatus" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Estatus (todos)</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="Aprobado">Aprobado</option>
+          <option value="Rechazado">Rechazado</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Dispositivo</span>
+        <select id="fDevice" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Dispositivo (todos)</option>
+          <option value="T-01">Torniquete 1</option>
+          <option value="T-02">Torniquete 2</option>
+          <option value="PU-01">Puerta principal</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Filtros rápidos (chips) -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button data-chip="all" class="chip px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm bg-gray-50">Todo</button>
+      <button data-chip="permiso" class="chip px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Permisos</button>
+      <button data-chip="incidencia" class="chip px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Incidencias</button>
+      <button data-chip="pendiente" class="chip px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Pendientes</button>
+      <button data-chip="aprobado" class="chip px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Aprobados</button>
+      <button data-chip="rechazado" class="chip px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm">Rechazados</button>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button id="btnApply" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Aplicar</button>
+        <button id="btnClear" type="button" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acciones masivas -->
+  <div class="flex items-center gap-2">
+    <button id="bulkApprove" class="px-3 py-2 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50" disabled>Aprobar seleccionados</button>
+    <button id="bulkReject" class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50" disabled>Rechazar seleccionados</button>
+    <span id="selCount" class="text-sm text-gray-500"></span>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-white rounded-2xl border border-gray-200">
+    <div class="overflow-auto max-h-[480px]">
+      <table class="min-w-full text-sm">
+        <thead class="sticky top-0 bg-gray-50 text-gray-600 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-2 w-10">
+              <input id="chkAll" type="checkbox" class="rounded border-gray-300">
+            </th>
+            <th class="px-4 py-2 text-left">Tipo</th>
+            <th class="px-4 py-2 text-left">Empleado</th>
+            <th class="px-4 py-2 text-left">Motivo</th>
+            <th class="px-4 py-2 text-left">Rango / Fecha</th>
+            <th class="px-4 py-2 text-left">Adjuntos</th>
+            <th class="px-4 py-2 text-left">Estatus</th>
+            <th class="px-4 py-2 text-right w-48">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="inboxBody" class="divide-y divide-gray-100 text-gray-700"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ====== Datos del servidor ====== */
+const INBOX = <%- JSON.stringify(inbox || []) %>;
+const BADGE_PERMISOS = <%= badgePermisos || 0 %>;
+const BADGE_INCIDENCIAS = <%= badgeIncidencias || 0 %>;
+const FILTERS = <%- JSON.stringify(filters || {}) %>;
+
+/* ====== Estado UI ====== */
+let chip = 'all';
+let selected = new Set();
+
+/* ====== Helpers UI ====== */
+const $ = (q)=>document.querySelector(q);
+const $$ = (q)=>document.querySelectorAll(q);
+const fmt = (d)=> d ? new Date(d).toLocaleString('es-MX') : '—';
+
+function pillKind(kind){
+  return kind==='permiso'
+    ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">📝 Permiso</span>'
+    : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">⚠️ Incidencia</span>';
+}
+function badgeStatus(s){
+  const map = {
+    'Pendiente':'bg-yellow-50 text-yellow-700 border border-yellow-200',
+    'Aprobado':'bg-green-50 text-green-700 border border-green-200',
+    'Rechazado':'bg-red-50 text-red-700 border border-red-200'
+  };
+  return `<span class="px-2.5 py-1 rounded-full text-xs font-medium ${map[s]||'bg-gray-50 text-gray-700 border'}">${s||'—'}</span>`;
+}
+function chipsAdjuntos(arr){
+  const n = arr?.length || 0;
+  if(!n) return '<span class="text-gray-400">—</span>';
+  return `<div class="flex flex-wrap gap-1">
+    ${arr.map(a=>`<a class="px-2 py-0.5 rounded-lg border border-gray-200 text-xs hover:bg-gray-50" href="/${a.ruta||'#'}" target="_blank" rel="noopener">${(a.nombre||'archivo')}</a>`).join('')}
+  </div>`;
+}
+
+function rowMatches(r){
+  const q = ($('#fQ').value||'').toLowerCase().trim();
+  const byText = !q || [r.empleado, r.motivo, r.tipo, r.modalidad, String(r.id_usuario)].some(v=> String(v||'').toLowerCase().includes(q));
+  const byChip =
+    chip==='all' ? true :
+    chip==='permiso' ? r.kind==='permiso' :
+    chip==='incidencia' ? r.kind==='incidencia' :
+    chip==='pendiente' ? r.estatus==='Pendiente' :
+    chip==='aprobado' ? r.estatus==='Aprobado' :
+    chip==='rechazado' ? r.estatus==='Rechazado' : true;
+  const byTipo = !$('#fTipo').value || (r.kind === $('#fTipo').value);
+  const byStatus = !$('#fStatus').value || (r.estatus === $('#fStatus').value);
+  // fRange y fDevice los puedes aplicar aquí cuando tu backend te pase fechas/dispositivo por fila
+  return byText && byChip && byTipo && byStatus;
+}
+
+/* ====== Render ====== */
+function renderSummary(rows){
+  const pendientes = rows.filter(r=>r.estatus==='Pendiente').length;
+  $('#kpiPendientes').textContent = pendientes;
+  // KPI resueltas: muestra últimas 7d aprox (simple placeholder si no hay fecha de resolución)
+  const resueltas = rows.filter(r=>r.estatus!=='Pendiente').length;
+  $('#kpiResueltas').textContent = resueltas || '—';
+  $('#badgePermisos').textContent = BADGE_PERMISOS;
+  $('#badgeIncidencias').textContent = BADGE_INCIDENCIAS;
+}
+
+function renderTable(rows){
+  const tbody = $('#inboxBody');
+  const filtered = rows.filter(rowMatches);
+  if (!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No hay resultados con los filtros seleccionados.</td></tr>`;
+    $('#selCount').textContent = '';
+    disableBulk();
+    return;
+  }
+  const html = filtered.map(r => {
+    const key = `${r.kind}:${r.id}`;
+    const checked = selected.has(key) ? 'checked' : '';
+    return `
+      <tr data-key="${key}" class="hover:bg-gray-50">
+        <td class="px-4 py-2 align-top">
+          <input type="checkbox" class="rowChk rounded border-gray-300" data-key="${key}" ${checked}>
+        </td>
+        <td class="px-4 py-2 align-top">${pillKind(r.kind)}</td>
+        <td class="px-4 py-2 align-top">
+          <div class="font-medium text-gray-900">${r.empleado||'—'}</div>
+          <div class="text-xs text-gray-500">ID: ${r.id_usuario}</div>
+        </td>
+        <td class="px-4 py-2 align-top">
+          <div class="text-gray-900">${r.motivo||'—'}</div>
+          <div class="text-xs text-gray-500">${[r.tipo, r.modalidad].filter(Boolean).join(' · ')}</div>
+        </td>
+        <td class="px-4 py-2 align-top">
+          <div class="text-gray-900">${r.rango_fechas || r.fecha_principal || '—'}</div>
+          <div class="text-xs text-gray-500">Creado: ${fmt(r.creado_en)}</div>
+        </td>
+        <td class="px-4 py-2 align-top">${chipsAdjuntos(r.adjuntos)}</td>
+        <td class="px-4 py-2 align-top">${badgeStatus(r.estatus)}</td>
+        <td class="px-4 py-2 align-top">
+          <div class="flex justify-end gap-2">
+            <a href="${r.ruta}" class="px-2 py-1 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">Ver</a>
+            ${r.estatus==='Pendiente' ? `
+              <button class="px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700" data-action="approve" data-key="${key}">Aprobar</button>
+              <button class="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700" data-action="reject" data-key="${key}">Rechazar</button>
+            `:''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  tbody.innerHTML = html;
+  updateBulkState();
+}
+
+/* ====== Bulk helpers ====== */
+function updateBulkState(){
+  const n = selected.size;
+  $('#selCount').textContent = n ? `${n} seleccionada(s)` : '';
+  $('#bulkApprove').disabled = n===0;
+  $('#bulkReject').disabled = n===0;
+}
+function disableBulk(){
+  $('#bulkApprove').disabled = true;
+  $('#bulkReject').disabled = true;
+}
+
+/* ====== Toast & Confirm ====== */
+function toast(msg){
+  const t = document.createElement('div');
+  t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-xl bg-gray-900 text-white text-sm shadow-lg';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2000);
+}
+async function confirmAction(text){
+  return new Promise(res=>{
+    const d = document.createElement('dialog');
+    d.className = 'rounded-2xl p-0 w-full max-w-sm';
+    d.innerHTML = `
+      <div class="bg-white rounded-2xl overflow-hidden">
+        <header class="px-4 py-3 border-b border-gray-200 font-semibold">Confirmar</header>
+        <div class="p-4 text-sm text-gray-700">${text}</div>
+        <footer class="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+          <button data-no class="px-3 py-2 rounded-lg border border-gray-200">Cancelar</button>
+          <button data-yes class="px-3 py-2 rounded-lg bg-blue-600 text-white">Continuar</button>
+        </footer>
+      </div>`;
+    document.body.appendChild(d);
+    d.showModal();
+    d.querySelector('[data-no]').onclick = ()=>{ d.close(); d.remove(); res(false); };
+    d.querySelector('[data-yes]').onclick = ()=>{ d.close(); d.remove(); res(true); };
+  });
+}
+
+
+/* ====== Listeners ====== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // KPIs & render inicial
+  renderSummary(INBOX);
+  renderTable(INBOX);
+
+  // Chips
+  $$('.chip').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      $$('.chip').forEach(x=>x.classList.remove('bg-gray-50'));
+      b.classList.add('bg-gray-50');
+      chip = b.dataset.chip;
+      renderTable(INBOX);
+    });
+  });
+
+  // Limpiar & Aplicar
+  $('#btnClear').addEventListener('click', ()=>{
+    $('#fQ').value=''; $('#fRange').value=''; $('#fTipo').value=''; $('#fStatus').value=''; $('#fDevice').value='';
+    chip = 'all';
+    $$('.chip').forEach(x=>x.classList.remove('bg-gray-50'));
+    document.querySelector('[data-chip="all"]').classList.add('bg-gray-50');
+    renderTable(INBOX);
+  });
+  $('#btnApply').addEventListener('click', ()=> renderTable(INBOX));
+
+  // Selección masiva
+  $('#chkAll').addEventListener('change', (e)=>{
+    selected.clear();
+    if(e.target.checked){
+      document.querySelectorAll('#inboxBody tr').forEach(tr=>{
+        const key = tr.getAttribute('data-key');
+        if(key) selected.add(key);
+      });
+      document.querySelectorAll('.rowChk').forEach(c=> c.checked = true);
+    }else{
+      document.querySelectorAll('.rowChk').forEach(c=> c.checked = false);
+    }
+    updateBulkState();
+  });
+
+  document.addEventListener('change', (e)=>{
+    const chk = e.target.closest('.rowChk');
+    if(!chk) return;
+    const key = chk.dataset.key;
+    if(chk.checked) selected.add(key); else selected.delete(key);
+    updateBulkState();
+  });
+
+  // Acciones individuales
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    const key = btn.dataset.key;
+    const action = btn.dataset.action; // approve | reject
+    const ok = await confirmAction(`¿${action==='approve'?'Aprobar':'Rechazar'} esta solicitud?`);
+    if(!ok) return;
+    try{
+      await doAction(key, action==='approve'?'aprobar':'rechazar');
+      toast('Acción aplicada');
+      renderTable(INBOX);
+    }catch(err){
+      console.error(err); toast('No se pudo completar la acción');
+    }
+  });
+
+  // Bulk
+  $('#bulkApprove').addEventListener('click', ()=> doBulk('aprobar'));
+  $('#bulkReject').addEventListener('click', ()=> doBulk('rechazar'));
+
+  // Export CSV
+  $('#btnExport').addEventListener('click', ()=>{
+    const rows = INBOX.filter(rowMatches);
+    const csv = ['kind,id,id_usuario,empleado,motivo,tipo,modalidad,rango_fechas,fecha_principal,creado_en,estatus,adjuntos']
+      .concat(rows.map(r => [
+        r.kind, r.id, r.id_usuario, r.empleado, r.motivo, r.tipo, r.modalidad, r.rango_fechas, r.fecha_principal, r.creado_en, r.estatus,
+        (r.adjuntos||[]).map(a=>a.ruta).join('|')
+      ].map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')))
+      .join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'solicitudes.csv'; a.click();
+  });
+
+  // Refresh soft (si tu API existe, cámbialo por fetch y reemplaza INBOX)
+  $('#btnRefresh').addEventListener('click', ()=> {
+    toast('Actualizado');
+    renderSummary(INBOX);
+    renderTable(INBOX);
+  });
+});
+</script>
+<script>
+// === Helpers de red ===
+async function doAction(key, action, comentario = '') {
+  const [kind, idStr] = String(key).split(':');
+  const id = parseInt(idStr, 10);
+  if (!kind || !id || !['aprobar','rechazar'].includes(action)) {
+    throw new Error('Parámetros inválidos');
+  }
+  const r = await fetch(`/api/solicitudes/${kind}/${id}/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ comentario })
+  });
+  const data = await r.json();
+  if (!r.ok || !data?.ok) throw new Error(data?.msg || 'Error');
+  // Reflejar en el arreglo INBOX en memoria
+  const idx = INBOX.findIndex(x => x.kind === kind && Number(x.id) === id);
+  if (idx >= 0) {
+    INBOX[idx].estatus = data.data.estatus;
+    INBOX[idx].id_aprobador = data.data.id_aprobador;
+    INBOX[idx].comentario_resolucion = data.data.comentario_resolucion || INBOX[idx].comentario_resolucion;
+  }
+  return data;
+}
+
+async function doBulk(action, comentario = '') {
+  const keys = Array.from(selected);
+  if (!keys.length) return;
+  const r = await fetch('/api/solicitudes/bulk', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ action, keys, comentario })
+  });
+  const data = await r.json();
+  if (!r.ok || !data?.ok) throw new Error(data?.msg || 'Error');
+  // Actualiza INBOX con lo que cambió
+  for (const ch of (data.changed || [])) {
+    const [kind, idStr] = ch.key.split(':');
+    const id = parseInt(idStr, 10);
+    const idx = INBOX.findIndex(x => x.kind === kind && Number(x.id) === id);
+    if (idx >= 0) {
+      INBOX[idx].estatus = action === 'aprobar' ? 'Aprobado' : 'Rechazado';
+      INBOX[idx].id_aprobador = ch.id_aprobador;
+    }
+  }
+  // Limpia selección y refresca UI
+  selected.clear();
+  document.querySelectorAll('.rowChk').forEach(c => c.checked = false);
+  document.getElementById('chkAll').checked = false;
+  updateBulkState();
+  renderSummary(INBOX);
+  renderTable(INBOX);
+  return data;
+}
+
+// === Conecta a tus botones existentes ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Botones masivos (ya los tienes definidos)
+  document.getElementById('bulkApprove').addEventListener('click', async () => {
+    const ok = await confirmAction('¿Aprobar solicitudes seleccionadas?');
+    if (!ok) return;
+    try {
+      await doBulk('aprobar');
+      toast('Solicitudes aprobadas');
+    } catch (e) {
+      console.error(e); toast('No se pudo completar la acción');
+    }
+  });
+  document.getElementById('bulkReject').addEventListener('click', async () => {
+    const ok = await confirmAction('¿Rechazar solicitudes seleccionadas?');
+    if (!ok) return;
+    try {
+      await doBulk('rechazar');
+      toast('Solicitudes rechazadas');
+    } catch (e) {
+      console.error(e); toast('No se pudo completar la acción');
+    }
+  });
+
+  // Tus acciones individuales ya llaman a doAction(key, 'aprobar'|'rechazar')
+  // y luego hacen renderTable(INBOX), perfecto.
+});
+</script>
+
+
+<%- include ('Plantilla/Final') %>

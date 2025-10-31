@@ -2,12 +2,174 @@ const express = require('express');
 const controller = express();
 const connections = require ('../database/db');
 const requireAuthView = require('../middlewares/requireAuthView');
+const requireAuthApi  = require('../middlewares/requireAuthApi');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 controller.use('/', require('./login_controller'));
 controller.use('/', require('./pendientes_controller'));
 controller.use('/', require('./incidencias_controller'));
+
+// Map de tipos → tabla y PK
+const KIND_MAP = {
+  permiso:    { table: 'permisos',    pk: 'id_permiso' },
+  incidencia: { table: 'incidencias', pk: 'id_incidencia' }
+};
+
+// Aprobador desde sesión (JWT)
+function getAprobador(req) {
+  return (req.user && req.user.id_usuario) || null;
+}
+
+// Valida 'kind' → {table, pk} o null
+function resolveKind(kind) {
+  return KIND_MAP[kind] || null;
+}
+
+// Traduce acción → estatus
+function statusFromAction(action) {
+  if (action === 'aprobar') return 'Aprobado';
+  if (action === 'rechazar') return 'Rechazado';
+  return null;
+}
+
+/**
+ * POST /api/solicitudes/:kind/:id/:action
+ *   kind: permiso | incidencia
+ *   id:   numérico
+ *   action: aprobar | rechazar
+ * body: { comentario?: string }
+ */
+controller.post('/api/solicitudes/:kind/:id/:action', requireAuthApi, (req, res) => {
+  const { kind, id, action } = req.params;
+  const meta = resolveKind(kind);
+  const nuevoEstatus = statusFromAction(action);
+  const comentario = (req.body?.comentario || '').toString().trim();
+  const aprobador = getAprobador(req);
+
+  if (!meta) return res.status(400).json({ ok:false, msg:'Tipo inválido (kind)' });
+  const rowId = parseInt(id, 10);
+  if (!rowId) return res.status(400).json({ ok:false, msg:'ID inválido' });
+  if (!nuevoEstatus) return res.status(400).json({ ok:false, msg:'Acción inválida' });
+  if (!aprobador) return res.status(401).json({ ok:false, msg:'No autenticado' });
+
+  // 1) Verifica que exista y esté Pendiente
+  const sqlSel = `SELECT ${meta.pk} AS id, estatus FROM ${meta.table} WHERE ${meta.pk} = ? LIMIT 1`;
+  connections.query(sqlSel, [rowId], (errS, rows) => {
+    if (errS) {
+      console.error('Error SELECT:', errS);
+      return res.status(500).json({ ok:false, msg:'Error del servidor (select)' });
+    }
+    const row = rows?.[0];
+    if (!row) return res.status(404).json({ ok:false, msg:'No encontrado' });
+    if (row.estatus !== 'Pendiente') {
+      return res.status(409).json({ ok:false, msg:`Ya está ${row.estatus}` });
+    }
+
+    // 2) Actualiza estatus, aprobador, comentario y timestamp
+    const sqlUpd = `
+      UPDATE ${meta.table}
+         SET estatus = ?,
+             id_aprobador = ?,
+             comentario_resolucion = CASE WHEN ? <> '' THEN ? ELSE comentario_resolucion END,
+             actualizado_en = NOW()
+       WHERE ${meta.pk} = ? AND estatus = 'Pendiente'
+       LIMIT 1
+    `;
+    const params = [nuevoEstatus, aprobador, comentario, comentario, rowId];
+
+    connections.query(sqlUpd, params, (errU, result) => {
+      if (errU) {
+        console.error('Error UPDATE:', errU);
+        return res.status(500).json({ ok:false, msg:'Error del servidor (update)' });
+      }
+      if (result.affectedRows === 0) {
+        // Alguien lo cambió en paralelo
+        return res.status(409).json({ ok:false, msg:'No se pudo cambiar (concurrencia)' });
+      }
+      return res.json({
+        ok: true,
+        msg: `Solicitud ${action}da`,
+        data: {
+          kind,
+          id: rowId,
+          estatus: nuevoEstatus,
+          id_aprobador: aprobador,
+          comentario_resolucion: comentario || null
+        }
+      });
+    });
+  });
+});
+
+/**
+ * POST /api/solicitudes/bulk
+ * body: { action: 'aprobar'|'rechazar', keys: ['permiso:14','incidencia:3'], comentario?: string }
+ */
+controller.post('/api/solicitudes/bulk', requireAuthApi, async (req, res) => {
+  try {
+    const action = (req.body?.action || '').toString().trim();
+    const keys = Array.isArray(req.body?.keys) ? req.body.keys : [];
+    const comentario = (req.body?.comentario || '').toString().trim();
+    const aprobador = getAprobador(req);
+
+    const nuevoEstatus = statusFromAction(action);
+    if (!nuevoEstatus) return res.status(400).json({ ok:false, msg:'Acción inválida' });
+    if (!aprobador) return res.status(401).json({ ok:false, msg:'No autenticado' });
+    if (!keys.length) return res.status(400).json({ ok:false, msg:'Sin keys' });
+
+    // Ejecuta secuencialmente para simplicidad
+    const changed = [];
+    const skipped = [];
+
+    for (const key of keys) {
+      const [kind, idStr] = String(key).split(':');
+      const meta = resolveKind(kind);
+      const id = parseInt(idStr, 10);
+
+      if (!meta || !id) {
+        skipped.push({ key, reason: 'key inválida' });
+        continue;
+      }
+
+      // WHERE Pendiente para evitar doble decisión
+      const sqlUpd = `
+        UPDATE ${meta.table}
+           SET estatus = ?,
+               id_aprobador = ?,
+               comentario_resolucion = CASE WHEN ? <> '' THEN ? ELSE comentario_resolucion END,
+               actualizado_en = NOW()
+         WHERE ${meta.pk} = ? AND estatus = 'Pendiente'
+         LIMIT 1
+      `;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await new Promise((resolve, reject) => {
+          connections.query(sqlUpd, [nuevoEstatus, aprobador, comentario, comentario, id], (e, r) => {
+            if (e) reject(e); else resolve(r);
+          });
+        });
+        if (result.affectedRows > 0) {
+          changed.push({ key, estatus: nuevoEstatus, id_aprobador: aprobador });
+        } else {
+          skipped.push({ key, reason: 'ya no está Pendiente o no existe' });
+        }
+      } catch (e) {
+        console.error('Bulk UPDATE error:', e);
+        skipped.push({ key, reason: 'error' });
+      }
+    }
+
+    return res.json({ ok:true, action, changed, skipped });
+  } catch (e) {
+    console.error('Bulk error:', e);
+    return res.status(500).json({ ok:false, msg:'Error del servidor' });
+  }
+});
+
+
+//----------------------------------------------------------------
+
 
 controller.post('/api/nfc/enroll', (req, res) => {
   let { id_usuario, numero_tarjeta, forceReplace } = req.body;

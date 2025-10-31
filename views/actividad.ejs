@@ -3,7 +3,7 @@
   const SEED = <%- JSON.stringify(typeof seed !== 'undefined' ? seed : {items:[], total:0, page:1, perPage:20}) %>;
 </script>
 
-<!-- === ACTIVIDAD: KPIs + Filtros + Timeline + Tabla + Modal === -->
+<!-- === ACTIVIDAD: KPIs + Filtros + Timeline === -->
 <section id="actividad" class="space-y-6">
 
   <!-- Encabezado y acciones -->
@@ -92,46 +92,14 @@
     </form>
   </div>
 
-  <!-- Vista combinada: Timeline + Tabla -->
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-    <!-- Timeline -->
+  <!-- Solo Timeline -->
+  <div class="grid grid-cols-1">
     <div class="bg-white rounded-2xl border border-gray-200 p-4">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-lg font-semibold text-gray-900">Eventos</h3>
         <span id="tlCount" class="text-sm text-gray-500">0 eventos</span>
       </div>
       <ol id="timeline" class="relative ml-4 border-l border-gray-200"></ol>
-    </div>
-
-    <!-- Tabla -->
-    <div class="bg-white rounded-2xl border border-gray-200">
-      <div class="p-4 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900">Tabla</h3>
-        <div class="text-sm text-gray-500">Orden: reciente ⟶ antiguo</div>
-      </div>
-      <div class="overflow-auto max-h-[540px]">
-        <table class="min-w-full text-sm">
-          <thead class="sticky top-0 bg-gray-50 text-gray-600 border-b border-gray-200">
-            <tr>
-              <th class="px-4 py-2 text-left">Empleado</th>
-              <th class="px-4 py-2 text-left">Evento</th>
-              <th class="px-4 py-2 text-left">Fecha/Hora</th>
-              <th class="px-4 py-2 text-left">Dispositivo</th>
-              <th class="px-4 py-2 text-left">Método</th>
-              <th class="px-4 py-2 text-left">Estado</th>
-              <th class="px-4 py-2 text-right">Detalles</th>
-            </tr>
-          </thead>
-          <tbody id="tbody" class="divide-y divide-gray-100 text-gray-700"></tbody>
-        </table>
-      </div>
-      <div class="p-4 flex items-center justify-between">
-        <p id="pageInfo" class="text-sm text-gray-500">Mostrando 0–0 de 0</p>
-        <div class="flex items-center gap-2">
-          <button id="prev" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Anterior</button>
-          <button id="next" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Siguiente</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -168,8 +136,8 @@
 <script>
 /* ======= Estado ======= */
 let DATA = SEED.items || [];
-let TOTAL = SEED.total || 0;
-let page  = SEED.page  || 1;
+let TOTAL = SEED.total || 0;   // lo conservamos por si tu API lo ocupa
+let page  = SEED.page  || 1;   // idem
 let size  = SEED.perPage || 20;
 
 let q = '', range = '24h', tipo = '', estado = '', device = '';
@@ -221,7 +189,6 @@ function renderTimeline(rows) {
       <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <div class="flex items-start justify-between">
           <div class="flex items-center">
-            
             <div class="ml-3">
               <div class="font-medium text-gray-900">${r.empleado}</div>
               <div class="text-xs text-gray-500">${r.puesto || ''}</div>
@@ -242,50 +209,16 @@ function renderTimeline(rows) {
           <div><dt class="text-gray-500">Audit ID</dt><dd class="text-gray-900">${r.auditId || '—'}</dd></div>
         </dl>
         <div class="mt-4 flex items-center gap-2">
-          <button data-id="${r.id}" class="btn-detalle px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver detalle</button>
+          <button data-id="${r.id ?? r.id_evento}" 
+        class="btn-detalle px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">
+  Ver detalle
+</button>
         </div>
       </div>
     `;
     c.appendChild(li);
   });
   $('#tlCount').textContent = `${Math.min(rows.length,12)} de ${rows.length} eventos`;
-}
-
-/* ======= Render Tabla + Paginación ======= */
-function renderTable(rows) {
-  const start = (page-1)*size, end = start + size;
-  const slice = rows.slice(start, end);
-  const tb = $('#tbody'); tb.innerHTML = '';
-
-  slice.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="px-4 py-2">
-        <div class="flex items-center">
-          
-          <div class="ml-2">
-            <div class="font-medium text-gray-900">${r.empleado}</div>
-            <div class="text-xs text-gray-500">${r.puesto || ''}</div>
-          </div>
-        </div>
-      </td>
-      <td class="px-4 py-2 capitalize">${r.evento}</td>
-      <td class="px-4 py-2">${r.fecha}</td>
-      <td class="px-4 py-2">${r.deviceName}</td>
-      <td class="px-4 py-2">${r.metodo}</td>
-      <td class="px-4 py-2">${fmtBadge(r.estado==='ok')}</td>
-      <td class="px-4 py-2 text-right">
-        <button data-id="${r.id}" class="btn-detalle px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Detalle</button>
-      </td>
-    `;
-    tb.appendChild(tr);
-  });
-
-  $('#pageInfo').textContent = `Mostrando ${rows.length ? start+1 : 0}–${Math.min(end, rows.length)} de ${rows.length}`;
-  $('#prev').disabled = page === 1;
-  $('#next').disabled = end >= rows.length;
-
-  $$('.btn-detalle').forEach(btn => btn.addEventListener('click', () => openDetail(rows.find(r=>r.id===btn.dataset.id))));
 }
 
 /* ======= Modal Detalle ======= */
@@ -313,7 +246,6 @@ async function loadData() {
     perPage: String(size),
     q, range, tipo, estado, device
   });
-  // Para "solo mi ID" cambia a /api/actividad/mia
   const res = await fetch(`/api/actividad?${params.toString()}`, { headers: { 'Accept':'application/json' } });
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Error al cargar datos');
@@ -325,7 +257,6 @@ async function refresh() {
   try { await loadData(); } catch(e){ console.error(e); }
   renderKpis(DATA);
   renderTimeline(DATA);
-  renderTable(DATA);
 }
 
 /* ======= Listeners UI ======= */
@@ -346,8 +277,6 @@ $('#btnClear').addEventListener('click', ()=>{
   page=1; refresh();
 });
 
-$('#prev').addEventListener('click', ()=>{ page=Math.max(1,page-1); refresh(); });
-$('#next').addEventListener('click', ()=>{ page=page+1; refresh(); });
 $('#btnRefresh').addEventListener('click', refresh);
 
 /* ======= Export CSV ======= */
@@ -382,9 +311,24 @@ $('#btnExport').addEventListener('click', ()=>{
 (function firstPaint(){
   renderKpis(DATA);
   renderTimeline(DATA);
-  renderTable(DATA);
   refresh();
 })();
+
+// === Click en "Ver detalle" (delegado, funciona para Timeline) ===
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-detalle');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  // Busca el registro en la DATA actual (por id o id_evento como fallback)
+  const rec = DATA.find(r => String(r.id ?? r.id_evento) === String(id));
+
+  if (!rec) {
+    console.warn('No se encontró el registro para el detalle', id);
+    return;
+  }
+  openDetail(rec);
+});
 </script>
 
 <%- include ('Plantilla/Final') %>
